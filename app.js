@@ -74,7 +74,7 @@ function caesarDoubleDecrypt(text, s1 = 1, s2 = 2) {
   return result;
 }
 
-// 🧪 Создаём тестовые аккаунты С ГАРАНТИЕЙ
+// 🧪 Тестовые аккаунты
 async function createTestAccounts() {
   const accounts = [
     { login: 'TEST', pass: '12345' },
@@ -96,18 +96,13 @@ async function createTestAccounts() {
           username: acc.login
         });
         console.log(`✅ АККАУНТ СОЗДАН: ${acc.login} / ${acc.pass}`);
-        console.log(`   Зашифрованный логин: ${encLogin}`);
-        console.log(`   Зашифрованный пароль: ${encPass}`);
-      } else {
-        console.log(`ℹ️ Аккаунт ${acc.login} уже существует`);
       }
     } catch (error) {
-      console.error(`❌ Ошибка создания ${acc.login}:`, error);
+      console.error(`❌ Ошибка:`, error);
     }
   }
 }
 
-// Запускаем создание при старте
 createTestAccounts();
 
 // 🎭 Элементы
@@ -122,7 +117,6 @@ const lastMsgText = document.getElementById('last-msg-text');
 const lastMsgTime = document.getElementById('last-msg-time');
 
 let currentUser = null;
-let unreadCount = 0;
 
 // 🔐 Вход
 document.getElementById('btn-enter').onclick = async () => {
@@ -133,36 +127,22 @@ document.getElementById('btn-enter').onclick = async () => {
   const encLogin = caesarDoubleEncrypt(login);
   const encPass = caesarDoubleEncrypt(pass);
   
-  console.log('🔍 Поиск пользователя...');
-  console.log('  Введён логин:', login);
-  console.log('  Введён пароль:', pass);
-  console.log('  Зашифрованный логин:', encLogin);
-  console.log('  Зашифрованный пароль:', encPass);
-  
   try {
     const snap = await db.ref('users/' + encLogin).once('value');
     
     if (!snap.exists()) {
-      console.error('❌ Пользователь не найден в базе');
       return alert('❌ Пользователь не найден\n\nПопробуй:\n- TEST / 12345\n- TEST2 / 54321');
     }
     
-    const userData = snap.val();
-    console.log(' Данные из базы:', userData);
-    console.log('  Пароль из базы:', userData.password);
-    
-    if (userData.password === encPass) {
-      console.log('✅ Успешный вход!');
+    if (snap.val().password === encPass) {
       currentUser = login;
       localStorage.setItem('shpak_user', login);
       showChat();
     } else {
-      console.error('❌ Неверный пароль');
       alert('❌ Неверный пароль');
     }
   } catch (error) {
-    console.error('❌ Ошибка входа:', error);
-    alert('❌ Ошибка подключения к базе данных');
+    alert('❌ Ошибка подключения');
   }
 };
 
@@ -184,11 +164,33 @@ function sendMessage() {
   db.ref('messages').push({
     author: currentUser,
     text: encText,
+    originalText: text, // Храним оригинал для анимации
     timestamp: Date.now(),
-    isDirector: currentUser.toLowerCase() === 'ваня',
-    read: false
+    isDirector: currentUser.toLowerCase() === 'ваня'
   });
   msgInput.value = '';
+}
+
+// 🎬 АНИМАЦИЯ РАСШИФРОВКИ
+function animateDecrypt(element, encryptedText, decryptedText, speed = 500) {
+  let currentIndex = 0;
+  const chars = decryptedText.split('');
+  
+  element.textContent = encryptedText; // Сначала зашифровано
+  
+  const interval = setInterval(() => {
+    if (currentIndex < chars.length) {
+      // Показываем по одному символу
+      const currentText = chars.slice(0, currentIndex + 1).join('');
+      const remainingEncrypted = encryptedText.slice(currentIndex + 1);
+      element.textContent = currentText + remainingEncrypted;
+      currentIndex++;
+    } else {
+      // Полностью расшифровано
+      element.textContent = decryptedText;
+      clearInterval(interval);
+    }
+  }, speed);
 }
 
 // 📥 Загрузка чата
@@ -200,13 +202,14 @@ function loadChat() {
     const data = snap.val();
     if (!data || !data.text) return;
     
-    const decText = caesarDoubleDecrypt(data.text);
+    const encryptedText = data.text;
+    const decryptedText = caesarDoubleDecrypt(data.text);
     const author = data.author || "Аноним";
     const time = new Date(data.timestamp).toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit'});
     const isOutgoing = author === currentUser;
     const isDirector = data.isDirector;
     
-    lastMsg = { text: decText, time: time, author: author };
+    lastMsg = { text: decryptedText, time: time, author: author };
     
     const msgDiv = document.createElement('div');
     msgDiv.className = `message ${isOutgoing ? 'outgoing' : 'incoming'} ${isDirector ? 'director' : ''}`;
@@ -215,7 +218,7 @@ function loadChat() {
     if (!isOutgoing) {
       html += `<div class="message-author">${author}</div>`;
     }
-    html += `<div class="message-text">${decText}</div>`;
+    html += `<div class="message-text"></div>`;
     html += `<div class="message-meta">`;
     html += `<span class="message-time">${time}</span>`;
     if (isOutgoing) {
@@ -225,6 +228,13 @@ function loadChat() {
     
     msgDiv.innerHTML = html;
     messagesDiv.appendChild(msgDiv);
+    
+    // 🔥 ЗАПУСКАЕМ АНИМАЦИЮ РАСШИФРОВКИ!
+    const textElement = msgDiv.querySelector('.message-text');
+    setTimeout(() => {
+      animateDecrypt(textElement, encryptedText, decryptedText, 300); // 300мс на символ
+    }, 100);
+    
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
     
     if (lastMsg) {
@@ -248,3 +258,28 @@ if (session) {
   currentUser = session;
   showChat();
 }
+
+// 📎 КНОПКА СКРЕПКИ (пасхалка!)
+document.querySelector('.attach-btn').onclick = () => {
+  alert('📎 ШПак Air Personnel\n\nПрикрепление файлов будет доступно в версии 2.0!\n\n(Пока что можно только бумажные самолётики ✈️)');
+};
+
+// 😊 КНОПКА ЭМОДЗИ (пока заглушка)
+document.querySelector('.emoji-btn').onclick = () => {
+  const emojis = ['😂', '❤️', '😍', '', '', '👏', '😢', '😮'];
+  const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
+  msgInput.value += randomEmoji;
+  msgInput.focus();
+};
+
+// 🔍 КНОПКИ В ШАПКЕ
+document.querySelectorAll('.header-btn').forEach(btn => {
+  btn.onclick = () => {
+    alert('🔧 Функция в разработке!\n\nСкоро будет доступно!');
+  };
+});
+
+// 📝 ПОИСК (заглушка)
+document.getElementById('search-input').addEventListener('input', (e) => {
+  console.log('🔍 Поиск:', e.target.value);
+});

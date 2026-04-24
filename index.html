@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>shpak Message</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="auth-screen">
+    <h2>?? shpak Message</h2>
+    <input id="login" placeholder="Логин">
+    <input id="pass" type="password" placeholder="Пароль">
+    <button id="btn-enter">Войти</button>
+    <button id="btn-reg">Регистрация</button>
+  </div>
+
+  <div id="chat-screen" style="display:none;">
+    <h2>?? Чат</h2>
+    <div id="messages"></div>
+    <input id="msg-input" placeholder="Сообщение...">
+    <button id="btn-send">??</button>
+    <button id="btn-logout" style="margin-left:10px;">Выйти</button>
+  </div>
+
+  <!-- Firebase Compat SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

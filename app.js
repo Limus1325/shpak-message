@@ -78,7 +78,7 @@ function caesarDoubleDecrypt(text, s1 = 1, s2 = 2) {
 function createTestAccounts() {
   const accounts = [
     { login: 'TEST', pass: '12345' },
-    { login: 'TEST2', pass: '54321' }
+    { login: 'TEST2', pass: '54321' },
   ];
   
   accounts.forEach(acc => {

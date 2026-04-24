@@ -7,22 +7,58 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div id="auth-screen">
-    <h2>🔐 shpak Message</h2>
-    <input id="login" placeholder="Логин">
-    <input id="pass" type="password" placeholder="Пароль">
-    <button id="btn-enter">Войти</button>
+  <div class="app-container">
+    <!-- Боковая панель (список чатов) -->
+    <div class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <h2>✈️ shpak Message</h2>
+        <div class="user-info" id="sidebar-user-info"></div>
+      </div>
+      <div class="chat-list">
+        <div class="chat-item active">
+          <div class="chat-avatar">📄</div>
+          <div class="chat-info">
+            <div class="chat-name">Общий чат</div>
+            <div class="chat-last-message">Нажмите, чтобы отправить сообщение</div>
+          </div>
+        </div>
+      </div>
+      <button id="btn-logout" class="logout-btn">🚪 Выйти</button>
+    </div>
+
+    <!-- Основная область чата -->
+    <div class="chat-area" id="chat-area">
+      <div class="chat-header">
+        <div class="chat-header-info">
+          <div class="chat-header-name">📄 Общий чат</div>
+          <div class="chat-header-status">онлайн</div>
+        </div>
+      </div>
+      
+      <div class="messages-container" id="messages"></div>
+      
+      <div class="message-input-area">
+        <input id="msg-input" placeholder="Написать сообщение..." type="text">
+        <button id="btn-send" class="send-btn">✈️</button>
+      </div>
+    </div>
+
+    <!-- Экран авторизации -->
+    <div id="auth-screen" class="auth-screen">
+      <div class="auth-box">
+        <h1>✈️ shpak Message</h1>
+        <p class="auth-subtitle">Бумажный мессенджер</p>
+        <input id="login" placeholder="Логин" type="text">
+        <input id="pass" placeholder="Пароль" type="password">
+        <button id="btn-enter" class="btn-primary">Войти</button>
+        <div class="test-account">
+          <p>🧪 Тестовый аккаунт:</p>
+          <p><strong>TEST</strong> / <strong>12345</strong></p>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <div id="chat-screen" style="display:none;">
-    <h2>✈️ Чат</h2>
-    <div id="messages"></div>
-    <input id="msg-input" placeholder="Сообщение...">
-    <button id="btn-send">✈️</button>
-    <button id="btn-logout" style="margin-left:10px;">Выйти</button>
-  </div>
-
-  <!-- Firebase Compat SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
   <script src="app.js"></script>

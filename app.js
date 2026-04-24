@@ -12,7 +12,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// 🔐 Шифр Цезаря
+// 🔐 Шифр
 function caesarDoubleEncrypt(text, s1 = 1, s2 = 2) {
   if (!text) return "";
   const totalShift = s1 + s2;
@@ -74,37 +74,47 @@ function caesarDoubleDecrypt(text, s1 = 1, s2 = 2) {
   return result;
 }
 
-// 🧪 Тестовый аккаунт
-function createTestAccount() {
-  const testLogin = 'TEST';
-  const testPass = '12345';
-  const encLogin = caesarDoubleEncrypt(testLogin);
-  const encPass = caesarDoubleEncrypt(testPass);
+// 🧪 Создаём тестовые аккаунты
+function createTestAccounts() {
+  const accounts = [
+    { login: 'TEST', pass: '12345' },
+    { login: 'TEST2', pass: '54321' }
+  ];
   
-  db.ref('users/' + encLogin).once('value').then(snap => {
-    if (!snap.exists()) {
-      db.ref('users/' + encLogin).set({
-        password: encPass,
-        created: Date.now(),
-        isDirector: false,
-        isTest: true
-      });
-    }
+  accounts.forEach(acc => {
+    const encLogin = caesarDoubleEncrypt(acc.login);
+    const encPass = caesarDoubleEncrypt(acc.pass);
+    
+    db.ref('users/' + encLogin).once('value').then(snap => {
+      if (!snap.exists()) {
+        db.ref('users/' + encLogin).set({
+          password: encPass,
+          created: Date.now(),
+          isDirector: false,
+          isTest: true,
+          username: acc.login
+        });
+        console.log(`✅ Создан аккаунт: ${acc.login} / ${acc.pass}`);
+      }
+    });
   });
 }
 
-createTestAccount();
+createTestAccounts();
 
 // 🎭 Элементы
 const authScreen = document.getElementById('auth-screen');
+const sidebar = document.getElementById('sidebar');
+const chatArea = document.getElementById('chat-area');
 const loginInput = document.getElementById('login');
 const passInput = document.getElementById('pass');
 const msgInput = document.getElementById('msg-input');
 const messagesDiv = document.getElementById('messages');
-const sidebar = document.getElementById('sidebar');
-const chatArea = document.getElementById('chat-area');
+const lastMsgText = document.getElementById('last-msg-text');
+const lastMsgTime = document.getElementById('last-msg-time');
 
 let currentUser = null;
+let unreadCount = 0;
 
 // 🔐 Вход
 document.getElementById('btn-enter').onclick = () => {
@@ -146,7 +156,8 @@ function sendMessage() {
     author: currentUser,
     text: encText,
     timestamp: Date.now(),
-    isDirector: currentUser.toLowerCase() === 'ваня'
+    isDirector: currentUser.toLowerCase() === 'ваня',
+    read: false
   });
   msgInput.value = '';
 }
@@ -154,6 +165,8 @@ function sendMessage() {
 // 📥 Загрузка чата
 function loadChat() {
   messagesDiv.innerHTML = '';
+  let lastMsg = null;
+  
   db.ref('messages').limitToLast(100).on('child_added', snap => {
     const data = snap.val();
     if (!data || !data.text) return;
@@ -164,6 +177,8 @@ function loadChat() {
     const isOutgoing = author === currentUser;
     const isDirector = data.isDirector;
     
+    lastMsg = { text: decText, time: time, author: author };
+    
     const msgDiv = document.createElement('div');
     msgDiv.className = `message ${isOutgoing ? 'outgoing' : 'incoming'} ${isDirector ? 'director' : ''}`;
     
@@ -172,11 +187,22 @@ function loadChat() {
       html += `<div class="message-author">${author}</div>`;
     }
     html += `<div class="message-text">${decText}</div>`;
-    html += `<div class="message-time">${time}</div>`;
+    html += `<div class="message-meta">`;
+    html += `<span class="message-time">${time}</span>`;
+    if (isOutgoing) {
+      html += `<span class="message-status">✓✓</span>`;
+    }
+    html += `</div>`;
     
     msgDiv.innerHTML = html;
     messagesDiv.appendChild(msgDiv);
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    
+    // Обновляем последнее сообщение в сайдбаре
+    if (lastMsg) {
+      lastMsgText.textContent = `${lastMsg.author}: ${lastMsg.text}`;
+      lastMsgTime.textContent = lastMsg.time;
+    }
   });
 }
 

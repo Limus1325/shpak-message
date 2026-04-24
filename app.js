@@ -12,7 +12,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// 🔐 Шифр
+// 🔐 ШИФР (РАБОТАЕТ С КИРИЛЛИЦЕЙ И ЦИФРАМИ!)
 function caesarDoubleEncrypt(text, s1 = 1, s2 = 2) {
   if (!text) return "";
   const totalShift = s1 + s2;
@@ -22,21 +22,36 @@ function caesarDoubleEncrypt(text, s1 = 1, s2 = 2) {
     const char = text[i];
     const code = char.charCodeAt(0);
     
+    // ЛАТИНИЦА A-Z
     if (code >= 65 && code <= 90) {
       result += String.fromCharCode(((code - 65 + totalShift) % 26) + 65);
-    } else if (code >= 97 && code <= 122) {
+    }
+    // ЛАТИНИЦА a-z
+    else if (code >= 97 && code <= 122) {
       result += String.fromCharCode(((code - 97 + totalShift) % 26) + 97);
-    } else if (code >= 1040 && code <= 1071) {
+    }
+    // КИРИЛЛИЦА А-Я (1040-1071)
+    else if (code >= 1040 && code <= 1071) {
       result += String.fromCharCode(((code - 1040 + totalShift) % 32) + 1040);
-    } else if (code >= 1072 && code <= 1103) {
+    }
+    // КИРИЛЛИЦА а-я (1072-1103)
+    else if (code >= 1072 && code <= 1103) {
       result += String.fromCharCode(((code - 1072 + totalShift) % 32) + 1072);
-    } else if (code === 1025) {
+    }
+    // Ё (1025)
+    else if (code === 1025) {
       result += String.fromCharCode(((0 + totalShift) % 32) + 1040);
-    } else if (code === 1105) {
+    }
+    // ё (1105)
+    else if (code === 1105) {
       result += String.fromCharCode(((0 + totalShift) % 32) + 1072);
-    } else if (code >= 48 && code <= 57) {
+    }
+    // ЦИФРЫ 0-9 (48-57)
+    else if (code >= 48 && code <= 57) {
       result += String.fromCharCode(((code - 48 + totalShift) % 10) + 48);
-    } else {
+    }
+    // Остальные символы
+    else {
       result += char;
     }
   }
@@ -115,11 +130,12 @@ const msgInput = document.getElementById('msg-input');
 const messagesDiv = document.getElementById('messages');
 const lastMsgText = document.getElementById('last-msg-text');
 const lastMsgTime = document.getElementById('last-msg-time');
+const emojiPicker = document.getElementById('emoji-picker');
 
 let currentUser = null;
 
 // 🔐 Вход
-document.getElementById('btn-enter').onclick = async () => {
+function login() {
   const login = loginInput.value.trim();
   const pass = passInput.value.trim();
   if (!login || !pass) return alert('Заполни логин и пароль!');
@@ -127,9 +143,7 @@ document.getElementById('btn-enter').onclick = async () => {
   const encLogin = caesarDoubleEncrypt(login);
   const encPass = caesarDoubleEncrypt(pass);
   
-  try {
-    const snap = await db.ref('users/' + encLogin).once('value');
-    
+  db.ref('users/' + encLogin).once('value').then(snap => {
     if (!snap.exists()) {
       return alert('❌ Пользователь не найден\n\nПопробуй:\n- TEST / 12345\n- TEST2 / 54321');
     }
@@ -141,10 +155,10 @@ document.getElementById('btn-enter').onclick = async () => {
     } else {
       alert('❌ Неверный пароль');
     }
-  } catch (error) {
-    alert('❌ Ошибка подключения');
-  }
-};
+  }).catch(error => {
+    alert('❌ Ошибка: ' + error.message);
+  });
+}
 
 // 🚪 Выход
 document.getElementById('btn-logout').onclick = () => {
@@ -152,10 +166,7 @@ document.getElementById('btn-logout').onclick = () => {
   location.reload();
 };
 
-// 💬 Отправка
-document.getElementById('btn-send').onclick = sendMessage;
-msgInput.addEventListener('keypress', e => { if (e.key === 'Enter') sendMessage(); });
-
+// 💬 Отправка сообщения
 function sendMessage() {
   const text = msgInput.value.trim();
   if (!text || !currentUser) return;
@@ -164,30 +175,80 @@ function sendMessage() {
   db.ref('messages').push({
     author: currentUser,
     text: encText,
-    originalText: text, // Храним оригинал для анимации
     timestamp: Date.now(),
-    isDirector: currentUser.toLowerCase() === 'ваня'
+    isDirector: currentUser.toLowerCase() === 'ваня',
+    type: 'text'
   });
   msgInput.value = '';
 }
 
-// 🎬 АНИМАЦИЯ РАСШИФРОВКИ
-function animateDecrypt(element, encryptedText, decryptedText, speed = 500) {
-  let currentIndex = 0;
-  const chars = decryptedText.split('');
+// 📎 Прикрепить фото
+function attachFile() {
+  document.getElementById('file-input').click();
+}
+
+function handleFileSelect(event) {
+  const file = event.target.files[0];
+  if (!file) return;
   
-  element.textContent = encryptedText; // Сначала зашифровано
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const base64Image = e.target.result;
+    
+    db.ref('messages').push({
+      author: currentUser,
+      image: base64Image,
+      timestamp: Date.now(),
+      isDirector: currentUser.toLowerCase() === 'ваня',
+      type: 'image'
+    });
+  };
+  reader.readAsDataURL(file);
+}
+
+// 😊 Эмодзи
+function toggleEmojiPicker() {
+  if (emojiPicker.style.display === 'none') {
+    emojiPicker.style.display = 'block';
+  } else {
+    emojiPicker.style.display = 'none';
+  }
+}
+
+function insertEmoji(emoji) {
+  msgInput.value += emoji;
+  msgInput.focus();
+  emojiPicker.style.display = 'none';
+}
+
+// 🔍 Поиск
+function showSearch() {
+  alert('🔍 Поиск по сообщениям\n\nФункция в разработке!');
+}
+
+// ⋮ Меню
+function showMenu() {
+  alert('⚙️ Меню\n\nНастройки будут доступны скоро!');
+}
+
+function toggleMenu() {
+  alert('☰ Меню чатов\n\nФункция в разработке!');
+}
+
+// 🎬 АНИМАЦИЯ РАСШИФРОВКИ
+function animateDecrypt(element, encryptedText, decryptedText, speed = 300) {
+  let currentIndex = 0;
+  element.classList.add('decrypting');
   
   const interval = setInterval(() => {
-    if (currentIndex < chars.length) {
-      // Показываем по одному символу
-      const currentText = chars.slice(0, currentIndex + 1).join('');
-      const remainingEncrypted = encryptedText.slice(currentIndex + 1);
+    if (currentIndex < decryptedText.length) {
+      const currentText = decryptedText.substring(0, currentIndex + 1);
+      const remainingEncrypted = encryptedText.substring(currentIndex + 1);
       element.textContent = currentText + remainingEncrypted;
       currentIndex++;
     } else {
-      // Полностью расшифровано
       element.textContent = decryptedText;
+      element.classList.remove('decrypting');
       clearInterval(interval);
     }
   }, speed);
@@ -200,16 +261,14 @@ function loadChat() {
   
   db.ref('messages').limitToLast(100).on('child_added', snap => {
     const data = snap.val();
-    if (!data || !data.text) return;
+    if (!data) return;
     
-    const encryptedText = data.text;
-    const decryptedText = caesarDoubleDecrypt(data.text);
     const author = data.author || "Аноним";
     const time = new Date(data.timestamp).toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit'});
     const isOutgoing = author === currentUser;
     const isDirector = data.isDirector;
     
-    lastMsg = { text: decryptedText, time: time, author: author };
+    lastMsg = { text: data.type === 'text' ? caesarDoubleDecrypt(data.text) : '📷 Фото', time: time, author: author };
     
     const msgDiv = document.createElement('div');
     msgDiv.className = `message ${isOutgoing ? 'outgoing' : 'incoming'} ${isDirector ? 'director' : ''}`;
@@ -218,7 +277,13 @@ function loadChat() {
     if (!isOutgoing) {
       html += `<div class="message-author">${author}</div>`;
     }
-    html += `<div class="message-text"></div>`;
+    
+    if (data.type === 'image') {
+      html += `<div class="photo-preview"><img src="${data.image}" alt="Photo"></div>`;
+    } else {
+      html += `<div class="message-text"></div>`;
+    }
+    
     html += `<div class="message-meta">`;
     html += `<span class="message-time">${time}</span>`;
     if (isOutgoing) {
@@ -229,11 +294,15 @@ function loadChat() {
     msgDiv.innerHTML = html;
     messagesDiv.appendChild(msgDiv);
     
-    // 🔥 ЗАПУСКАЕМ АНИМАЦИЮ РАСШИФРОВКИ!
-    const textElement = msgDiv.querySelector('.message-text');
-    setTimeout(() => {
-      animateDecrypt(textElement, encryptedText, decryptedText, 300); // 300мс на символ
-    }, 100);
+    // 🔥 АНИМАЦИЯ ДЛЯ ТЕКСТОВЫХ СООБЩЕНИЙ
+    if (data.type === 'text') {
+      const textElement = msgDiv.querySelector('.message-text');
+      const encryptedText = data.text;
+      const decryptedText = caesarDoubleDecrypt(data.text);
+      setTimeout(() => {
+        animateDecrypt(textElement, encryptedText, decryptedText, 300);
+      }, 100);
+    }
     
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
     
@@ -259,27 +328,7 @@ if (session) {
   showChat();
 }
 
-// 📎 КНОПКА СКРЕПКИ (пасхалка!)
-document.querySelector('.attach-btn').onclick = () => {
-  alert('📎 ШПак Air Personnel\n\nПрикрепление файлов будет доступно в версии 2.0!\n\n(Пока что можно только бумажные самолётики ✈️)');
-};
-
-// 😊 КНОПКА ЭМОДЗИ (пока заглушка)
-document.querySelector('.emoji-btn').onclick = () => {
-  const emojis = ['😂', '❤️', '😍', '', '', '👏', '😢', '😮'];
-  const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
-  msgInput.value += randomEmoji;
-  msgInput.focus();
-};
-
-// 🔍 КНОПКИ В ШАПКЕ
-document.querySelectorAll('.header-btn').forEach(btn => {
-  btn.onclick = () => {
-    alert('🔧 Функция в разработке!\n\nСкоро будет доступно!');
-  };
-});
-
-// 📝 ПОИСК (заглушка)
-document.getElementById('search-input').addEventListener('input', (e) => {
-  console.log('🔍 Поиск:', e.target.value);
+// Enter для входа
+passInput.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') login();
 });

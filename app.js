@@ -1,4 +1,4 @@
-// ?? FIREBASE CONFIG (Ú‚ÓË ÍÎ˛˜Ë!)
+// üî• FIREBASE CONFIG
 const firebaseConfig = {
   apiKey: "AIzaSyCCTgHTXjKC3Q0x3YRZtR6cikE-p2FoQ_0",
   authDomain: "shpak-message.firebaseapp.com",
@@ -9,11 +9,11 @@ const firebaseConfig = {
   appId: "1:302522413165:web:cbd2d65395c58289680f64"
 };
 
-// »ÌËˆË‡ÎËÁ‡ˆËˇ
+// –ò–Ω–∏—Ü–∏–∞–ª–∏–∑–∞—Ü–∏—è
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// ?? ¡≈«Œœ¿—Õ€… ‰‚ÓÈÌÓÈ ¯ËÙ ÷ÂÁ‡ˇ (ÚÓÎ¸ÍÓ ·ÛÍ‚˚ Ë ˆËÙ˚)
+// üîê –ë–ï–ó–û–ü–ê–°–ù–´–ô –¥–≤–æ–π–Ω–æ–π —à–∏—Ñ—Ä –¶–µ–∑–∞—Ä—è
 function caesarDoubleEncrypt(text, s1 = 1, s2 = 2) {
   if (!text) return "";
   
@@ -24,49 +24,74 @@ function caesarDoubleEncrypt(text, s1 = 1, s2 = 2) {
     const char = text[i];
     const code = char.charCodeAt(0);
     
-    // À‡ÚËÌËˆ‡ A-Z, a-z
     if (code >= 65 && code <= 90) {
       result += String.fromCharCode(((code - 65 + totalShift) % 26) + 65);
     }
     else if (code >= 97 && code <= 122) {
       result += String.fromCharCode(((code - 97 + totalShift) % 26) + 97);
     }
-    //  ËËÎÎËˆ‡ ¿-ﬂ, ‡-ˇ (‚ÍÎ˛˜‡ˇ ®)
     else if (code >= 1040 && code <= 1071) {
       result += String.fromCharCode(((code - 1040 + totalShift) % 32) + 1040);
     }
     else if (code >= 1072 && code <= 1103) {
       result += String.fromCharCode(((code - 1072 + totalShift) % 32) + 1072);
     }
-    else if (code === 1025) { // ®
+    else if (code === 1025) {
       result += String.fromCharCode(((0 + totalShift) % 32) + 1040);
     }
-    else if (code === 1105) { // ∏
+    else if (code === 1105) {
       result += String.fromCharCode(((0 + totalShift) % 32) + 1072);
     }
-    // ÷ËÙ˚ 0-9
     else if (code >= 48 && code <= 57) {
       result += String.fromCharCode(((code - 48 + totalShift) % 10) + 48);
     }
-    // ŒÒÚ‡Î¸Ì˚Â ÒËÏ‚ÓÎ˚ ÓÒÚ‡‚ÎˇÂÏ Í‡Í ÂÒÚ¸
     else {
       result += char;
     }
   }
   return result;
-// ?? ›À≈Ã≈Õ“€
-const authScreen = document.getElementById('auth-screen');
-const chatScreen = document.getElementById('chat-screen');
-const loginInput = document.getElementById('login');
-const passInput = document.getElementById('pass');
-const msgInput = document.getElementById('msg-input');
-const messagesDiv = document.getElementById('messages');
+}
 
-let currentUser = null;
+function caesarDoubleDecrypt(text, s1 = 1, s2 = 2) {
+  if (!text) return "";
+  
+  const totalShift = s1 + s2;
+  const decryptShift = 32 - (totalShift % 32);
+  let result = "";
+  
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const code = char.charCodeAt(0);
+    
+    if (code >= 65 && code <= 90) {
+      result += String.fromCharCode(((code - 65 + decryptShift) % 26) + 65);
+    }
+    else if (code >= 97 && code <= 122) {
+      result += String.fromCharCode(((code - 97 + decryptShift) % 26) + 97);
+    }
+    else if (code >= 1040 && code <= 1071) {
+      result += String.fromCharCode(((code - 1040 + decryptShift) % 32) + 1040);
+    }
+    else if (code >= 1072 && code <= 1103) {
+      result += String.fromCharCode(((code - 1072 + decryptShift) % 32) + 1072);
+    }
+    else if (code === 1025) {
+      result += String.fromCharCode(((0 + decryptShift) % 32) + 1040);
+    }
+    else if (code === 1105) {
+      result += String.fromCharCode(((0 + decryptShift) % 32) + 1072);
+    }
+    else if (code >= 48 && code <= 57) {
+      result += String.fromCharCode(((code - 48 + decryptShift) % 10) + 48);
+    }
+    else {
+      result += char;
+    }
+  }
+  return result;
+}
 
-// ?? œ–Œ¬≈– ¿ —≈——»»
-function checkSession() {
-	// ?? —Œ«ƒ¿®Ã “≈—“Œ¬€… ¿  ¿”Õ“ (TEST / 12345)
+// üß™ –°–æ–∑–¥–∞—ë–º —Ç–µ—Å—Ç–æ–≤—ã–π –∞–∫–∫–∞—É–Ω—Ç TEST/12345
 function createTestAccount() {
   const testLogin = 'TEST';
   const testPass = '12345';
@@ -74,7 +99,6 @@ function createTestAccount() {
   const encLogin = caesarDoubleEncrypt(testLogin);
   const encPass = caesarDoubleEncrypt(testPass);
   
-  // œÓ‚ÂˇÂÏ Ë ÒÓÁ‰‡∏Ï ÚÂÒÚÓ‚˚È ‡ÍÍ‡ÛÌÚ
   db.ref('users/' + encLogin).once('value').then(snap => {
     if (!snap.exists()) {
       db.ref('users/' + encLogin).set({
@@ -84,14 +108,26 @@ function createTestAccount() {
         isTest: true,
         username: 'TEST'
       }).then(() => {
-        console.log('? “ÂÒÚÓ‚˚È ‡ÍÍ‡ÛÌÚ ÒÓÁ‰‡Ì: TEST / 12345');
+        console.log('‚úÖ –¢–µ—Å—Ç–æ–≤—ã–π –∞–∫–∫–∞—É–Ω—Ç —Å–æ–∑–¥–∞–Ω: TEST / 12345');
       });
     }
   });
 }
 
-// ¬˚Á˚‚‡ÂÏ ÔË Á‡ÔÛÒÍÂ
 createTestAccount();
+
+// üé≠ –≠–ª–µ–º–µ–Ω—Ç—ã
+const authScreen = document.getElementById('auth-screen');
+const chatScreen = document.getElementById('chat-screen');
+const loginInput = document.getElementById('login');
+const passInput = document.getElementById('pass');
+const msgInput = document.getElementById('msg-input');
+const messagesDiv = document.getElementById('messages');
+
+let currentUser = null;
+
+// üîê –ü—Ä–æ–≤–µ—Ä–∫–∞ —Å–µ—Å—Å–∏–∏
+function checkSession() {
   const session = localStorage.getItem('shpak_user');
   if (session) {
     currentUser = session;
@@ -101,35 +137,17 @@ createTestAccount();
   }
 }
 
-// ?? –≈√»—“–¿÷»ﬂ
-document.getElementById('btn-reg').onclick = () => {
-  const login = loginInput.value.trim();
-  const pass = passInput.value.trim();
-  if (!login || !pass) return alert('«‡ÔÓÎÌË ÎÓ„ËÌ Ë Ô‡ÓÎ¸!');
-  
-  const encLogin = caesarDoubleEncrypt(login);
-  const encPass = caesarDoubleEncrypt(pass);
-  
-  db.ref('users/' + encLogin).set({ 
-    password: encPass, 
-    created: Date.now(),
-    isDirector: login.toLowerCase() === '‚‡Ìˇ' // ¬‡Ìˇ = ‰ËÂÍÚÓ ??
-  }).then(() => {
-    alert('? ¿ÍÍ‡ÛÌÚ ÒÓÁ‰‡Ì! “ÂÔÂ¸ ‚ÓÈ‰Ë.');
-    loginInput.value = '';
-    passInput.value = '';
-  }).catch(e => alert('? Œ¯Ë·Í‡: ' + e.message));
-};
-
-// ?? ¬’Œƒ
+// üîë –í—Ö–æ–¥
 document.getElementById('btn-enter').onclick = () => {
   const login = loginInput.value.trim();
   const pass = passInput.value.trim();
+  if (!login || !pass) return alert('–ó–∞–ø–æ–ª–Ω–∏ –ª–æ–≥–∏–Ω –∏ –ø–∞—Ä–æ–ª—å!');
+  
   const encLogin = caesarDoubleEncrypt(login);
   const encPass = caesarDoubleEncrypt(pass);
   
   db.ref('users/' + encLogin).once('value').then(snap => {
-    if (!snap.exists()) return alert('? œÓÎ¸ÁÓ‚‡ÚÂÎ¸ ÌÂ Ì‡È‰ÂÌ');
+    if (!snap.exists()) return alert('‚ùå –ü–æ–ª—å–∑–æ–≤–∞—Ç–µ–ª—å –Ω–µ –Ω–∞–π–¥–µ–Ω');
     if (snap.val().password === encPass) {
       currentUser = login;
       localStorage.setItem('shpak_user', login);
@@ -137,18 +155,18 @@ document.getElementById('btn-enter').onclick = () => {
       chatScreen.style.display = 'block';
       loadChat();
     } else {
-      alert('? ÕÂ‚ÂÌ˚È Ô‡ÓÎ¸');
+      alert('‚ùå –ù–µ–≤–µ—Ä–Ω—ã–π –ø–∞—Ä–æ–ª—å');
     }
   });
 };
 
-// ?? ¬€’Œƒ
+// üö™ –í—ã—Ö–æ–¥
 document.getElementById('btn-logout').onclick = () => {
   localStorage.removeItem('shpak_user');
   location.reload();
 };
 
-// ?? Œ“œ–¿¬ ¿ —ŒŒ¡Ÿ≈Õ»ﬂ
+// üí¨ –û—Ç–ø—Ä–∞–≤–∫–∞ —Å–æ–æ–±—â–µ–Ω–∏—è
 document.getElementById('btn-send').onclick = sendMessage;
 msgInput.addEventListener('keypress', e => { if (e.key === 'Enter') sendMessage(); });
 
@@ -161,27 +179,31 @@ function sendMessage() {
     author: currentUser,
     text: encText,
     timestamp: Date.now(),
-    isDirector: currentUser.toLowerCase() === '‚‡Ìˇ'
+    isDirector: currentUser.toLowerCase() === '–≤–∞–Ω—è'
   });
   msgInput.value = '';
 }
 
-// ?? «¿√–”« ¿ ◊¿“¿
+// üì• –ó–∞–≥—Ä—É–∑–∫–∞ —á–∞—Ç–∞
 function loadChat() {
   db.ref('messages').limitToLast(100).on('child_added', snap => {
     const data = snap.val();
+    if (!data || !data.text) return;
+    
     const decText = caesarDoubleDecrypt(data.text);
+    const author = data.author || "–ê–Ω–æ–Ω–∏–º";
+    
     const el = document.createElement('div');
     el.className = 'message';
     if (data.isDirector) {
-      el.innerHTML = `<strong style="color:#ff6b6b">?? ${data.author}:</strong> ${decText}`;
+      el.innerHTML = `<strong style="color:#ff6b6b">üé© ${author}:</strong> ${decText}`;
     } else {
-      el.innerHTML = `<strong>${data.author}:</strong> ${decText}`;
+      el.innerHTML = `<strong>${author}:</strong> ${decText}`;
     }
     messagesDiv.appendChild(el);
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
   });
 }
 
-// «‡ÔÛÒÍ
+// –ó–∞–ø—É—Å–∫
 checkSession();

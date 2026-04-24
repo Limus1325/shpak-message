@@ -74,32 +74,40 @@ function caesarDoubleDecrypt(text, s1 = 1, s2 = 2) {
   return result;
 }
 
-// 🧪 Создаём тестовые аккаунты
-function createTestAccounts() {
+// 🧪 Создаём тестовые аккаунты С ГАРАНТИЕЙ
+async function createTestAccounts() {
   const accounts = [
     { login: 'TEST', pass: '12345' },
-    { login: 'TEST2', pass: '54321' },
+    { login: 'TEST2', pass: '54321' }
   ];
   
-  accounts.forEach(acc => {
+  for (const acc of accounts) {
     const encLogin = caesarDoubleEncrypt(acc.login);
     const encPass = caesarDoubleEncrypt(acc.pass);
     
-    db.ref('users/' + encLogin).once('value').then(snap => {
+    try {
+      const snap = await db.ref('users/' + encLogin).once('value');
       if (!snap.exists()) {
-        db.ref('users/' + encLogin).set({
+        await db.ref('users/' + encLogin).set({
           password: encPass,
           created: Date.now(),
           isDirector: false,
           isTest: true,
           username: acc.login
         });
-        console.log(`✅ Создан аккаунт: ${acc.login} / ${acc.pass}`);
+        console.log(`✅ АККАУНТ СОЗДАН: ${acc.login} / ${acc.pass}`);
+        console.log(`   Зашифрованный логин: ${encLogin}`);
+        console.log(`   Зашифрованный пароль: ${encPass}`);
+      } else {
+        console.log(`ℹ️ Аккаунт ${acc.login} уже существует`);
       }
-    });
-  });
+    } catch (error) {
+      console.error(`❌ Ошибка создания ${acc.login}:`, error);
+    }
+  }
 }
 
+// Запускаем создание при старте
 createTestAccounts();
 
 // 🎭 Элементы
@@ -117,7 +125,7 @@ let currentUser = null;
 let unreadCount = 0;
 
 // 🔐 Вход
-document.getElementById('btn-enter').onclick = () => {
+document.getElementById('btn-enter').onclick = async () => {
   const login = loginInput.value.trim();
   const pass = passInput.value.trim();
   if (!login || !pass) return alert('Заполни логин и пароль!');
@@ -125,16 +133,37 @@ document.getElementById('btn-enter').onclick = () => {
   const encLogin = caesarDoubleEncrypt(login);
   const encPass = caesarDoubleEncrypt(pass);
   
-  db.ref('users/' + encLogin).once('value').then(snap => {
-    if (!snap.exists()) return alert('❌ Пользователь не найден');
-    if (snap.val().password === encPass) {
+  console.log('🔍 Поиск пользователя...');
+  console.log('  Введён логин:', login);
+  console.log('  Введён пароль:', pass);
+  console.log('  Зашифрованный логин:', encLogin);
+  console.log('  Зашифрованный пароль:', encPass);
+  
+  try {
+    const snap = await db.ref('users/' + encLogin).once('value');
+    
+    if (!snap.exists()) {
+      console.error('❌ Пользователь не найден в базе');
+      return alert('❌ Пользователь не найден\n\nПопробуй:\n- TEST / 12345\n- TEST2 / 54321');
+    }
+    
+    const userData = snap.val();
+    console.log(' Данные из базы:', userData);
+    console.log('  Пароль из базы:', userData.password);
+    
+    if (userData.password === encPass) {
+      console.log('✅ Успешный вход!');
       currentUser = login;
       localStorage.setItem('shpak_user', login);
       showChat();
     } else {
+      console.error('❌ Неверный пароль');
       alert('❌ Неверный пароль');
     }
-  });
+  } catch (error) {
+    console.error('❌ Ошибка входа:', error);
+    alert('❌ Ошибка подключения к базе данных');
+  }
 };
 
 // 🚪 Выход
@@ -198,7 +227,6 @@ function loadChat() {
     messagesDiv.appendChild(msgDiv);
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
     
-    // Обновляем последнее сообщение в сайдбаре
     if (lastMsg) {
       lastMsgText.textContent = `${lastMsg.author}: ${lastMsg.text}`;
       lastMsgTime.textContent = lastMsg.time;

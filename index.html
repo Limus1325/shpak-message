@@ -11,7 +11,7 @@
     <!-- Боковая панель -->
     <div class="sidebar" id="sidebar" style="display:none;">
       <div class="sidebar-header">
-        <div class="menu-btn">☰</div>
+        <div class="menu-btn" onclick="toggleMenu()">☰</div>
         <div class="search-box">
           <input type="text" placeholder="Поиск" id="search-input">
         </div>
@@ -27,7 +27,6 @@
             </div>
             <div class="chat-bottom">
               <div class="chat-last-message" id="last-msg-text">Нажмите, чтобы отправить сообщение</div>
-              <div class="chat-unread" id="unread-count" style="display:none;">0</div>
             </div>
           </div>
         </div>
@@ -46,22 +45,22 @@
           <div class="chat-header-avatar">📄</div>
           <div class="chat-header-info">
             <div class="chat-header-name">Общий чат</div>
-            <div class="chat-header-status" id="header-status">онлайн</div>
+            <div class="chat-header-status">онлайн</div>
           </div>
         </div>
         <div class="chat-header-actions">
-          <button class="header-btn">🔍</button>
-          <button class="header-btn">⋮</button>
+          <button class="header-btn" onclick="showSearch()">🔍</button>
+          <button class="header-btn" onclick="showMenu()">⋮</button>
         </div>
       </div>
       
       <div class="messages-container" id="messages"></div>
       
       <div class="message-input-area">
-        <button class="attach-btn">📎</button>
+        <button class="attach-btn" onclick="attachFile()" title="Прикрепить фото">📎</button>
         <input id="msg-input" placeholder="Написать сообщение..." type="text">
-        <button class="emoji-btn">😊</button>
-        <button id="btn-send" class="send-btn">
+        <button class="emoji-btn" onclick="toggleEmojiPicker()" title="Эмодзи">😊</button>
+        <button id="btn-send" class="send-btn" onclick="sendMessage()">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
             <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
           </svg>
@@ -77,9 +76,30 @@
         <p class="auth-subtitle">Быстрый и безопасный мессенджер</p>
         <input id="login" placeholder="Логин" type="text">
         <input id="pass" placeholder="Пароль" type="password">
-        <button id="btn-enter" class="btn-primary">Продолжить</button>
+        <button id="btn-enter" class="btn-primary" onclick="login()">Продолжить</button>
       </div>
     </div>
+
+    <!-- Окно выбора эмодзи -->
+    <div id="emoji-picker" class="emoji-picker" style="display:none;">
+      <div class="emoji-grid">
+        <span onclick="insertEmoji('😀')">😀</span>
+        <span onclick="insertEmoji('😂')">😂</span>
+        <span onclick="insertEmoji('😍')"></span>
+        <span onclick="insertEmoji('')">👍</span>
+        <span onclick="insertEmoji('')">👏</span>
+        <span onclick="insertEmoji('🔥')"></span>
+        <span onclick="insertEmoji('❤️')">❤️</span>
+        <span onclick="insertEmoji('😢')">😢</span>
+        <span onclick="insertEmoji('😮')">😮</span>
+        <span onclick="insertEmoji('')">🎉</span>
+        <span onclick="insertEmoji('')">✈️</span>
+        <span onclick="insertEmoji('')">📄</span>
+      </div>
+    </div>
+
+    <!-- Скрытый input для файлов -->
+    <input type="file" id="file-input" accept="image/*" style="display:none;" onchange="handleFileSelect(event)">
   </div>
 
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>

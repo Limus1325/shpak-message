@@ -340,6 +340,11 @@ body {
 .message-text {
   color: var(--ink);
   min-height: 1.2em;
+  word-wrap: break-word;
+  word-break: break-word;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  hyphens: auto;
 }
 
 .message-text.decrypting {

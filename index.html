@@ -8,7 +8,7 @@
 </head>
 <body>
   <div class="app-container">
-    <!-- Боковая панель -->
+    <!-- Сайдбар -->
     <div class="sidebar" id="sidebar" style="display:none;">
       <div class="sidebar-header">
         <button class="menu-btn" onclick="toggleSidebar()">☰</button>
@@ -29,7 +29,7 @@
 
     <!-- Область чата -->
     <div class="chat-area" id="chat-area" style="display:none;">
-      <!-- ROOT PANEL (Скрыта по умолчанию) -->
+      <!-- GOD MODE PANEL (Только для ROOT) -->
       <div id="root-panel" style="display:none; background:#1a0505; color:#ff3333; padding:6px; font-family:monospace; font-size:12px; justify-content:space-between; align-items:center; border-bottom:1px solid #ff0000;">
         <span>⚠️ GOD MODE: LIMUSSS</span>
         <div>
@@ -65,31 +65,27 @@
       </div>
     </div>
 
-    <!-- Экран авторизации (АБСОЛЮТНО ЧИСТЫЙ) -->
+    <!-- Экран входа -->
     <div id="auth-screen" class="auth-screen">
       <div class="auth-box paper-sheet">
         <div class="auth-logo">✈️</div>
         <h1>shpak Message</h1>
         <p class="auth-subtitle">Encrypted Paper Protocol</p>
-        
         <input id="login" placeholder="Логин">
         <input id="pass" placeholder="Пароль" type="password">
-        
         <button id="btn-enter" class="btn-primary">Войти</button>
-        
-        <!-- Никаких подсказок здесь больше нет -->
       </div>
     </div>
   </div>
 
-  <!-- Меню (Три точки) -->
+  <!-- Выпадающее меню -->
   <div id="menu-dropdown" class="menu-dropdown" style="display:none;">
     <div class="menu-item" onclick="showProfile()">👤 Профиль</div>
     <div class="menu-item" onclick="clearChat()">🗑️ Очистить чат</div>
     <div class="menu-item" onclick="showAbout()">ℹ️ О системе</div>
   </div>
 
-  <!-- Боковое меню (Три полоски) -->
+  <!-- Боковое меню -->
   <div id="sidebar-menu" class="sidebar-menu" style="display:none;">
     <div class="sidebar-menu-header">
       <h3>📄 Меню</h3>
@@ -101,7 +97,7 @@
     </div>
   </div>
 
-  <!-- Модалка фото -->
+  <!-- Фото модалка -->
   <div id="photo-modal" class="photo-modal" style="display:none;" onclick="closePhotoModal(event)">
     <div class="photo-modal-content" onclick="event.stopPropagation()">
       <button class="close-btn" onclick="closePhotoModal()">✕</button>
@@ -110,7 +106,7 @@
     </div>
   </div>
 
-  <!-- Модалка нового чата -->
+  <!-- Создание чата -->
   <div id="new-chat-modal" class="modal-overlay" style="display:none;">
     <div class="modal-content paper-sheet">
       <h3>Новый чат</h3>
@@ -136,9 +132,9 @@
   <div id="emoji-picker" class="emoji-picker" style="display:none;">
     <div class="emoji-grid">
       <span onclick="insertEmoji('😀')">😀</span><span onclick="insertEmoji('😂')">😂</span>
-      <span onclick="insertEmoji('😍')">😍</span><span onclick="insertEmoji('🔥')"></span>
+      <span onclick="insertEmoji('😍')">😍</span><span onclick="insertEmoji('🔥')">🔥</span>
       <span onclick="insertEmoji('👍')"></span><span onclick="insertEmoji('👎')"></span>
-      <span onclick="insertEmoji('🤫')">🤫</span><span onclick="insertEmoji('✈️')">✈️</span>
+      <span onclick="insertEmoji('🤫')"></span><span onclick="insertEmoji('✈️')">✈️</span>
     </div>
   </div>
 

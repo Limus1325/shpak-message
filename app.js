@@ -134,9 +134,20 @@ function sendMessage() {
     const text = msgInput.value.trim();
     if (!text || !currentUser) return;
     
+    // Разбиваем на слова и переносим слишком длинные
+    const words = text.split(' ');
+    const processedWords = words.map(word => {
+        if (word.length > 30) {
+            // Разбиваем слово на части по 30 символов
+            return word.match(/.{1,30}/g).join('-\n');
+        }
+        return word;
+    });
+    const processedText = processedWords.join(' ');
+    
     db.ref('messages').push({
         author: currentUser,
-        text: encrypt(text), // Шифруем перед отправкой
+        text: encrypt(processedText),
         timestamp: Date.now(),
         type: 'text'
     });

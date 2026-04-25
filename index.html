@@ -11,20 +11,18 @@
     <!-- Боковая панель -->
     <div class="sidebar" id="sidebar" style="display:none;">
       <div class="sidebar-header">
-        <button class="menu-btn" onclick="toggleSidebarMenu()">☰</button>
+        <button class="menu-btn" onclick="toggleSidebar()">☰</button>
         <div class="search-box">
-          <input type="text" placeholder="Поиск" onclick="showSearch()">
+          <input type="text" placeholder="Поиск..." onclick="openSearch()">
         </div>
       </div>
       
       <div class="chat-list-header">
         <h3>Чаты</h3>
-        <button class="new-chat-btn" onclick="showNewChatModal()">+ Чат</button>
+        <button class="new-chat-btn" onclick="openNewChatModal()">+ Чат</button>
       </div>
       
-      <div class="chat-list" id="chat-list">
-        <!-- Чаты будут здесь -->
-      </div>
+      <div class="chat-list" id="chat-list"></div>
       
       <div class="sidebar-footer">
         <div class="user-info" id="sidebar-user-info"></div>
@@ -34,16 +32,27 @@
 
     <!-- Область чата -->
     <div class="chat-area" id="chat-area" style="display:none;">
+      
+      <!-- ПАНЕЛЬ ROOT (Скрыта для всех кроме LIMUSSS) -->
+      <div id="root-panel" style="display:none; background:#2a0000; color:#ff4444; padding:5px; font-family:monospace; font-size:12px; justify-content:space-between; align-items:center; border-bottom:1px solid #ff0000;">
+        <span>⚠️ GOD MODE ACTIVE: LIMUSSS</span>
+        <div>
+          <input type="text" id="force-input" placeholder="Force Sender (User)" style="width:100px; background:#440000; color:white; border:1px solid red;">
+          <button onclick="showSystemInfo()" style="background:red; color:white; border:none; padding:2px 5px; cursor:pointer;">SYS</button>
+          <button onclick="forceClearDB()" style="background:red; color:white; border:none; padding:2px 5px; cursor:pointer;">NUKE</button>
+        </div>
+      </div>
+
       <div class="chat-header">
         <div class="chat-header-left">
           <div class="chat-header-avatar">📄</div>
           <div class="chat-header-info">
-            <div class="chat-header-name" id="chat-header-name">Общий чат</div>
-            <div class="chat-header-status">онлайн</div>
+            <div class="chat-header-name" id="chat-header-name">Загрузка...</div>
+            <div class="chat-header-status">online</div>
           </div>
         </div>
         <div class="chat-header-actions">
-          <button class="header-btn" onclick="showSearch()" title="Поиск">🔍</button>
+          <button class="header-btn" onclick="openSearch()" title="Поиск">🔍</button>
           <button class="header-btn" onclick="toggleMenu()" title="Меню">⋮</button>
         </div>
       </div>
@@ -51,104 +60,88 @@
       <div class="messages-container" id="messages"></div>
       
       <div class="message-input-area">
-        <button class="attach-btn" onclick="attachFile()" title="Прикрепить">📎</button>
+        <button class="attach-btn" onclick="triggerFile()" title="Фото">📎</button>
         <input id="msg-input" placeholder="Написать сообщение..." type="text">
-        <button class="emoji-btn" onclick="toggleEmojiPicker()" title="Эмодзи">😊</button>
-        <button id="btn-send" class="send-btn" title="Отправить">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
-            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-          </svg>
+        <button class="emoji-btn" onclick="toggleEmoji()" title="Смайлы">😊</button>
+        <button id="btn-send" class="send-btn">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
         </button>
       </div>
     </div>
 
-    <!-- Экран авторизации -->
+    <!-- Авторизация -->
     <div id="auth-screen" class="auth-screen">
       <div class="auth-box paper-sheet">
         <div class="auth-logo">✈️</div>
         <h1>shpak Message</h1>
-        <p class="auth-subtitle">Бумажный мессенджер</p>
-        <input id="login" placeholder="Логин" type="text">
+        <input id="login" placeholder="Логин">
         <input id="pass" placeholder="Пароль" type="password">
         <button id="btn-enter" class="btn-primary">Войти</button>
-        <div style="margin-top:15px; font-size:12px; color:#888;">
-          <p>Тест: TEST / 12345</p>
-          <p>Админ: Vanya / admin123</p>
-          <p>Разраб: Kirill / dev123</p>
+        <div style="margin-top:10px; font-size:11px; color:#666; text-align:left;">
+          <p>ROOT: LIMUSSS / dev123</p>
+          <p>ADMIN: GENERAL DIRECTOR / admin123</p>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Модальное окно просмотра фото -->
+  <!-- Меню (Три точки) -->
+  <div id="menu-dropdown" class="menu-dropdown" style="display:none;">
+    <div class="menu-item" onclick="showProfile()">👤 Профиль</div>
+    <div class="menu-item" onclick="clearChat()">🗑️ Очистить чат</div>
+    <div class="menu-item" onclick="showAbout()">ℹ️ О системе</div>
+  </div>
+
+  <!-- Боковое меню (Три полоски) -->
+  <div id="sidebar-menu" class="sidebar-menu" style="display:none;">
+    <div class="sidebar-menu-header">
+      <h3>📄 Меню</h3>
+      <button onclick="toggleSidebar()">✕</button>
+    </div>
+    <div class="sidebar-menu-items">
+      <div class="menu-item" onclick="showProfile()">👤 Профиль</div>
+      <div class="menu-item" onclick="openNewChatModal()">➕ Создать чат</div>
+    </div>
+  </div>
+
+  <!-- Модалки -->
   <div id="photo-modal" class="photo-modal" style="display:none;" onclick="closePhotoModal(event)">
     <div class="photo-modal-content" onclick="event.stopPropagation()">
-      <button class="close-modal" onclick="closePhotoModal()">✕</button>
-      <img id="modal-image" src="" alt="Photo">
+      <button class="close-btn" onclick="closePhotoModal()">✕</button>
+      <img id="modal-img" src="" alt="Photo">
       <div class="photo-modal-info" id="modal-info"></div>
     </div>
   </div>
 
-  <!-- Выпадающее меню (три точки) -->
-  <div id="menu-dropdown" class="menu-dropdown" style="display:none;">
-    <div class="menu-item" onclick="showProfile()">👤 Профиль</div>
-    <div class="menu-item" onclick="clearChat()">🗑️ Очистить чат</div>
-    <div class="menu-item" onclick="showAbout()">ℹ️ О приложении</div>
-  </div>
-
-  <!-- Боковое меню (три полоски) -->
-  <div id="sidebar-menu" class="sidebar-menu" style="display:none;">
-    <div class="sidebar-menu-header">
-      <h3>📄 Меню</h3>
-      <button onclick="toggleSidebarMenu()">✕</button>
-    </div>
-    <div class="sidebar-menu-items">
-      <div class="menu-item" onclick="showProfile()">👤 Профиль</div>
-      <div class="menu-item" onclick="showNewChatModal()">➕ Создать чат</div>
-      <div class="menu-item" onclick="showAbout()">ℹ️ О приложении</div>
-    </div>
-  </div>
-
-  <!-- Модальное окно создания чата -->
   <div id="new-chat-modal" class="modal-overlay" style="display:none;">
     <div class="modal-content paper-sheet">
-      <h3>Создать новый чат</h3>
-      <input type="text" id="new-chat-name" placeholder="Название чата">
-      <p style="font-size:12px; color:#666; margin:10px 0;">Участники:</p>
-      <div id="user-select-list" style="max-height:150px; overflow-y:auto; border:1px dashed #ccc; padding:5px; margin-bottom:10px;"></div>
-      <div class="modal-actions">
+      <h3>Новый чат</h3>
+      <input type="text" id="new-chat-name" placeholder="Название">
+      <div id="user-list" style="max-height:100px; overflow:auto; border:1px dashed #999; margin:5px 0;"></div>
+      <div style="display:flex; gap:5px;">
         <button class="btn-secondary" onclick="closeNewChatModal()">Отмена</button>
-        <button class="btn-primary" onclick="createNewChat()">Создать</button>
+        <button class="btn-primary" onclick="createChat()">Создать</button>
       </div>
     </div>
   </div>
 
-  <!-- Окно поиска -->
   <div id="search-overlay" class="search-overlay" style="display:none;">
     <div class="search-box-container">
-      <input type="text" id="search-input" placeholder="Поиск сообщений..." oninput="handleSearch(this.value)">
+      <input type="text" id="search-input" placeholder="Поиск..." oninput="handleSearch(this.value)">
       <button onclick="closeSearch()">✕</button>
     </div>
     <div id="search-results" class="search-results"></div>
   </div>
 
-  <!-- Окно эмодзи -->
   <div id="emoji-picker" class="emoji-picker" style="display:none;">
     <div class="emoji-grid">
-      <span onclick="insertEmoji('😀')">😀</span>
-      <span onclick="insertEmoji('😂')">😂</span>
-      <span onclick="insertEmoji('😍')">😍</span>
-      <span onclick="insertEmoji('👍')"></span>
-      <span onclick="insertEmoji('🔥')"></span>
-      <span onclick="insertEmoji('❤️')">❤️</span>
-      <span onclick="insertEmoji('👏')"></span>
-      <span onclick="insertEmoji('😊')">😊</span>
+      <span onclick="insertEmoji('😀')">😀</span><span onclick="insertEmoji('😂')">😂</span>
+      <span onclick="insertEmoji('😍')">😍</span><span onclick="insertEmoji('🔥')"></span>
+      <span onclick="insertEmoji('👍')">👍</span><span onclick="insertEmoji('👎')">👎</span>
     </div>
   </div>
 
-  <!-- Скрытый input для файлов -->
-  <input type="file" id="file-input" accept="image/*" style="display:none;" onchange="handleFileSelect(event)">
-
+  <input type="file" id="file-input" accept="image/*" style="display:none;" onchange="handleFile(event)">
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
   <script src="app.js"></script>

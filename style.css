@@ -805,3 +805,52 @@ body {
     cursor: pointer;
     border-radius: 4px;
 }
+/* ===== ROOT MODE STYLES ===== */
+#root-panel {
+  display: none; /* Скрыто по умолчанию */
+}
+
+.message.root-message {
+  border: 2px solid #ffd700 !important;
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+  background: #fffdf0;
+}
+
+.msg-head-right {
+  text-align: right;
+}
+
+/* ===== ADMIN BUTTONS ===== */
+.del-btn {
+  cursor: pointer;
+  opacity: 0.5;
+  transition: 0.2s;
+}
+.del-btn:hover { opacity: 1; transform: scale(1.2); }
+
+/* ===== MODALS & SEARCH ===== */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+  display: flex; align-items: center; justify-content: center; z-index: 2000;
+}
+.modal-content {
+  width: 300px; padding: 15px; background: var(--paper-bg);
+  border: 2px solid var(--paper-line); box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+}
+.search-overlay {
+  position: fixed; top: 0; left: 0; right: 0; background: var(--paper-bg);
+  padding: 10px; z-index: 1000; box-shadow: 0 5px 10px rgba(0,0,0,0.2);
+  display: none;
+}
+.search-box-container { display: flex; gap: 5px; max-width: 600px; margin: 0 auto; }
+.search-box-container input { flex: 1; padding: 8px; border: 1px solid #ccc; }
+.search-results { max-height: 300px; overflow: auto; margin-top: 10px; }
+.search-item { padding: 8px; border-bottom: 1px solid #eee; cursor: pointer; }
+.search-item:hover { background: #f0f0f0; }
+.emoji-picker {
+  position: absolute; bottom: 80px; right: 80px; background: white;
+  border: 1px solid #ccc; padding: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+  z-index: 100; display: none;
+}
+.emoji-grid span { font-size: 20px; cursor: pointer; padding: 5px; }
+.emoji-grid span:hover { background: #eee; }

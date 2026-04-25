@@ -11,8 +11,7 @@
     <!-- Сайдбар -->
     <div class="sidebar" id="sidebar" style="display:none;">
       <div class="sidebar-header">
-        <!-- ТРИ ПОЛОСКИ -> ПРОФИЛЬ -->
-        <button class="menu-btn" onclick="openProfileMenu()">☰</button>
+        <button class="menu-btn" onclick="toggleProfileMenu()">☰</button>
         <div class="search-box">
           <input type="text" placeholder="Поиск..." onclick="openSearch()">
         </div>
@@ -51,8 +50,7 @@
         <div class="chat-header-actions">
           <button class="header-btn" onclick="startCall()" title="Позвонить">📞</button>
           <button class="header-btn" onclick="openSearch()">🔍</button>
-          <!-- ТРИ ТОЧКИ -> НАСТРОЙКИ ЧАТА -->
-          <button class="header-btn" onclick="openChatSettings()">⋮</button>
+          <button class="header-btn" onclick="toggleChatMenu()">⋮</button>
         </div>
       </div>
       
@@ -81,16 +79,16 @@
     </div>
   </div>
 
-  <!-- Меню профиля (Три полоски) -->
+  <!-- Меню профиля (☰) -->
   <div id="profile-menu" class="dropdown-menu" style="display:none;">
     <div class="menu-item" onclick="showProfile()">👤 Мой профиль</div>
-    <div class="menu-item" onclick="logout()">🚪 Выйти из системы</div>
+    <div class="menu-item" onclick="logout()">🚪 Выйти</div>
   </div>
 
-  <!-- Настройки чата (Три точки) -->
-  <div id="chat-settings-menu" class="dropdown-menu" style="display:none;">
-    <div class="menu-item" onclick="blockCurrentUser()">🚫 Заблокировать собеседника</div>
-    <div class="menu-item" onclick="deleteCurrentChat()" style="color:red;">🗑️ Удалить этот чат</div>
+  <!-- Меню чата (⋮) -->
+  <div id="chat-menu" class="dropdown-menu" style="display:none;">
+    <div class="menu-item" onclick="blockCurrentUser()">🚫 Заблокировать</div>
+    <div class="menu-item" onclick="deleteCurrentChat()" style="color:red;">🗑️ Удалить чат</div>
   </div>
 
   <!-- Интерфейс звонка -->
@@ -107,7 +105,7 @@
     </div>
   </div>
 
-  <!-- Остальные модалки (Поиск, Эмодзи, Фото, Новый чат) -->
+  <!-- Остальные модалки -->
   <div id="photo-modal" class="photo-modal" style="display:none;" onclick="closePhotoModal(event)">
     <div class="photo-modal-content" onclick="event.stopPropagation()">
       <button class="close-btn" onclick="closePhotoModal()">✕</button>
@@ -126,7 +124,7 @@
   <div id="emoji-picker" class="emoji-picker" style="display:none;">
     <div class="emoji-grid">
       <span onclick="insertEmoji('😀')">😀</span><span onclick="insertEmoji('😂')">😂</span>
-      <span onclick="insertEmoji('😍')">😍</span><span onclick="insertEmoji('🔥')">🔥</span>
+      <span onclick="insertEmoji('😍')">😍</span><span onclick="insertEmoji('🔥')"></span>
     </div>
   </div>
 

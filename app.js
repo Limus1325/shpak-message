@@ -271,3 +271,178 @@ if (localStorage.getItem('shpak_user')) {
 // Enter в полях
 passInput.addEventListener('keypress', e => { if(e.key === 'Enter') login(); });
 msgInput.addEventListener('keypress', e => { if(e.key === 'Enter') sendMessage(); });
+// 📸 ПРОСМОТР ФОТО
+function openPhotoModal(imageSrc, author, time) {
+    const modal = document.getElementById('photo-modal');
+    const modalImg = document.getElementById('modal-image');
+    const modalInfo = document.getElementById('modal-info');
+    
+    modalImg.src = imageSrc;
+    modalInfo.textContent = `📷 Фото от ${author} • ${time}`;
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+function closePhotoModal(event) {
+    if (!event || event.target.id === 'photo-modal' || event.target.className === 'close-modal') {
+        const modal = document.getElementById('photo-modal');
+        modal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
+}
+
+// Обновление функции загрузки чата - добавь onclick для фото
+// Найди в loadChat() где создается фото и замени на:
+/*
+if (data.type === 'image') {
+    contentHtml = `<img src="${data.image}" class="photo-preview" onclick="openPhotoModal('${data.image}', '${data.author}', '${time}')" style="cursor:pointer;">`;
+}
+*/
+
+// 🔍 ПОИСК
+function showSearch() {
+    const overlay = document.getElementById('search-overlay');
+    overlay.style.display = 'block';
+    document.getElementById('search-messages').focus();
+}
+
+function closeSearch() {
+    document.getElementById('search-overlay').style.display = 'none';
+    document.getElementById('search-results').innerHTML = '';
+}
+
+function searchMessages(query) {
+    const resultsDiv = document.getElementById('search-results');
+    
+    if (query.length < 2) {
+        resultsDiv.innerHTML = '';
+        return;
+    }
+    
+    // Ищем в последних 50 сообщениях
+    db.ref('messages').limitToLast(50).once('value').then(snap => {
+        const messages = [];
+        snap.forEach(child => {
+            const msg = child.val();
+            if (msg.type === 'text') {
+                const decText = decrypt(msg.text);
+                if (decText.toLowerCase().includes(query.toLowerCase())) {
+                    messages.push({
+                        author: msg.author,
+                        text: decText,
+                        time: new Date(msg.timestamp).toLocaleTimeString(),
+                        key: child.key
+                    });
+                }
+            }
+        });
+        
+        if (messages.length === 0) {
+            resultsDiv.innerHTML = '<div style="padding:20px;text-align:center;color:var(--pencil)">Ничего не найдено</div>';
+        } else {
+            resultsDiv.innerHTML = messages.map(msg => `
+                <div class="search-result-item" onclick="scrollToMessage('${msg.key}')">
+                    <strong>${msg.author}</strong> <small>${msg.time}</small><br>
+                    ${msg.text}
+                </div>
+            `).join('');
+        }
+    });
+}
+
+function scrollToMessage(key) {
+    const msgElement = document.querySelector(`[data-key="${key}"]`);
+    if (msgElement) {
+        msgElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        msgElement.style.background = '#fff3cd';
+        setTimeout(() => {
+            msgElement.style.background = '';
+        }, 2000);
+    }
+    closeSearch();
+}
+
+// ⋮ МЕНЮ (ТРИ ТОЧКИ)
+function showMenu() {
+    const menu = document.getElementById('menu-dropdown');
+    menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+}
+
+function showProfile() {
+    hideAllMenus();
+    showToast(`👤 Профиль: ${currentUser}\n\nСтатус: онлайн\nСообщений: загружается...`);
+}
+
+function clearChat() {
+    hideAllMenus();
+    if (confirm('🗑️ Очистить весь чат?\n\nЭто действие нельзя отменить!')) {
+        db.ref('messages').remove().then(() => {
+            showToast('✅ Чат очищен');
+        });
+    }
+}
+
+function toggleTheme() {
+    hideAllMenus();
+    document.body.classList.toggle('dark-theme');
+    showToast('🎨 Тема изменена (в разработке)');
+}
+
+function showAbout() {
+    hideAllMenus();
+    alert('📄 shpak Message v1.0\n\nБумажный мессенджер с шифрованием\n\nСоздано с ❤️ для Шпак Air\n\nТестовые аккаунты:\n• TEST / 12345\n• TEST2 / 54321');
+}
+
+function hideAllMenus() {
+    document.getElementById('menu-dropdown').style.display = 'none';
+    document.getElementById('sidebar-menu').style.display = 'none';
+    document.getElementById('search-overlay').style.display = 'none';
+}
+
+// ☰ БОКОВОЕ МЕНЮ (ТРИ ПОЛОСКИ)
+function toggleSidebarMenu() {
+    const menu = document.getElementById('sidebar-menu');
+    menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+}
+
+function showSettings() {
+    hideAllMenus();
+    showToast('⚙️ Настройки в разработке');
+}
+
+function showContacts() {
+    hideAllMenus();
+    showToast('📞 Контакты:\n\nTEST\nTEST2');
+}
+
+// 🔔 УВЕДОМЛЕНИЯ
+function showToast(message) {
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.style.whiteSpace = 'pre-line';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.3s';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+// Закрытие меню при клике вне их
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.menu-dropdown') && !e.target.closest('.header-btn')) {
+        document.getElementById('menu-dropdown').style.display = 'none';
+    }
+    if (!e.target.closest('.sidebar-menu') && !e.target.closest('.menu-btn')) {
+        const menu = document.getElementById('sidebar-menu');
+        if (!e.target.closest('.sidebar-menu-header')) {
+            menu.style.display = 'none';
+        }
+    }
+});
+
+// Обновление функции loadChat - добавь data-key для поиска
+// Найди где создается msgDiv и добавь:
+// msgDiv.setAttribute('data-key', snap.key);

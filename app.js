@@ -12,45 +12,55 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// 🔐 ШИФР (РАБОТАЕТ С КИРИЛЛИЦЕЙ И ЦИФРАМИ!)
-function caesarDoubleEncrypt(text, s1 = 1, s2 = 2) {
+// 🔐 ШИФР (Шифрование +3, Расшифровка -3)
+function encrypt(text) {
+  return caesar(text, 3);
+}
+
+function decrypt(text) {
+  return caesar(text, -3); // Ключ -3, как ты просил
+}
+
+function caesar(text, shift) {
   if (!text) return "";
-  const totalShift = s1 + s2;
   let result = "";
   
   for (let i = 0; i < text.length; i++) {
     const char = text[i];
     const code = char.charCodeAt(0);
     
-    // ЛАТИНИЦА A-Z
+    // ЛАТИНИЦА A-Z (26 символов)
     if (code >= 65 && code <= 90) {
-      result += String.fromCharCode(((code - 65 + totalShift) % 26) + 65);
+      result += shiftChar(code, 65, 26, shift);
     }
-    // ЛАТИНИЦА a-z
+    // ЛАТИНИЦА a-z (26 символов)
     else if (code >= 97 && code <= 122) {
-      result += String.fromCharCode(((code - 97 + totalShift) % 26) + 97);
+      result += shiftChar(code, 97, 26, shift);
     }
-    // КИРИЛЛИЦА А-Я (1040-1071)
+    // КИРИЛЛИЦА А-Я (32 символа, включая Ё)
     else if (code >= 1040 && code <= 1071) {
-      result += String.fromCharCode(((code - 1040 + totalShift) % 32) + 1040);
+      result += shiftChar(code, 1040, 32, shift);
     }
-    // КИРИЛЛИЦА а-я (1072-1103)
+    // КИРИЛЛИЦА а-я (32 символа)
     else if (code >= 1072 && code <= 1103) {
-      result += String.fromCharCode(((code - 1072 + totalShift) % 32) + 1072);
+      result += shiftChar(code, 1072, 32, shift);
     }
-    // Ё (1025)
+    // Ё (отдельно, так как выпадает из диапазона)
     else if (code === 1025) {
-      result += String.fromCharCode(((0 + totalShift) % 32) + 1040);
+      // Сдвигаем Ё как А (индекс 0)
+      let newCode = ((0 + shift) % 32 + 32) % 32 + 1040; 
+      result += String.fromCharCode(newCode);
     }
-    // ё (1105)
+    // ё (отдельно)
     else if (code === 1105) {
-      result += String.fromCharCode(((0 + totalShift) % 32) + 1072);
+      let newCode = ((0 + shift) % 32 + 32) % 32 + 1072;
+      result += String.fromCharCode(newCode);
     }
-    // ЦИФРЫ 0-9 (48-57)
+    // ЦИФРЫ 0-9 (10 символов)
     else if (code >= 48 && code <= 57) {
-      result += String.fromCharCode(((code - 48 + totalShift) % 10) + 48);
+      result += shiftChar(code, 48, 10, shift);
     }
-    // Остальные символы
+    // Остальные символы (пробелы, знаки) не меняем
     else {
       result += char;
     }
@@ -58,35 +68,13 @@ function caesarDoubleEncrypt(text, s1 = 1, s2 = 2) {
   return result;
 }
 
-function caesarDoubleDecrypt(text, s1 = 1, s2 = 2) {
-  if (!text) return "";
-  const totalShift = s1 + s2;
-  const decryptShift = 32 - (totalShift % 32);
-  let result = "";
-  
-  for (let i = 0; i < text.length; i++) {
-    const char = text[i];
-    const code = char.charCodeAt(0);
-    
-    if (code >= 65 && code <= 90) {
-      result += String.fromCharCode(((code - 65 + decryptShift) % 26) + 65);
-    } else if (code >= 97 && code <= 122) {
-      result += String.fromCharCode(((code - 97 + decryptShift) % 26) + 97);
-    } else if (code >= 1040 && code <= 1071) {
-      result += String.fromCharCode(((code - 1040 + decryptShift) % 32) + 1040);
-    } else if (code >= 1072 && code <= 1103) {
-      result += String.fromCharCode(((code - 1072 + decryptShift) % 32) + 1072);
-    } else if (code === 1025) {
-      result += String.fromCharCode(((0 + decryptShift) % 32) + 1040);
-    } else if (code === 1105) {
-      result += String.fromCharCode(((0 + decryptShift) % 32) + 1072);
-    } else if (code >= 48 && code <= 57) {
-      result += String.fromCharCode(((code - 48 + decryptShift) % 10) + 48);
-    } else {
-      result += char;
-    }
-  }
-  return result;
+// Вспомогательная функция для сдвига с корректным отрицательным сдвигом
+function shiftChar(code, base, size, shift) {
+  const codeWithoutBase = code - base;
+  // Формула: ((index + shift) % size + size) % size
+  // Это гарантирует, что даже при сдвиге -3 результат будет положительным
+  const shiftedIndex = ((codeWithoutBase + shift) % size + size) % size;
+  return String.fromCharCode(base + shiftedIndex);
 }
 
 // 🧪 Тестовые аккаунты
@@ -97,8 +85,9 @@ async function createTestAccounts() {
   ];
   
   for (const acc of accounts) {
-    const encLogin = caesarDoubleEncrypt(acc.login);
-    const encPass = caesarDoubleEncrypt(acc.pass);
+    // При регистрации тоже шифруем пароль
+    const encLogin = encrypt(acc.login); 
+    const encPass = encrypt(acc.pass);
     
     try {
       const snap = await db.ref('users/' + encLogin).once('value');
@@ -136,21 +125,22 @@ let currentUser = null;
 
 // 🔐 Вход
 function login() {
-  const login = loginInput.value.trim();
-  const pass = passInput.value.trim();
-  if (!login || !pass) return alert('Заполни логин и пароль!');
+  const loginVal = loginInput.value.trim();
+  const passVal = passInput.value.trim();
+  if (!loginVal || !passVal) return alert('Заполни логин и пароль!');
   
-  const encLogin = caesarDoubleEncrypt(login);
-  const encPass = caesarDoubleEncrypt(pass);
+  const encLogin = encrypt(loginVal);
+  const encPass = encrypt(passVal);
   
   db.ref('users/' + encLogin).once('value').then(snap => {
     if (!snap.exists()) {
       return alert('❌ Пользователь не найден\n\nПопробуй:\n- TEST / 12345\n- TEST2 / 54321');
     }
     
+    // Сравниваем зашифрованный пароль из базы с введенным зашифрованным
     if (snap.val().password === encPass) {
-      currentUser = login;
-      localStorage.setItem('shpak_user', login);
+      currentUser = loginVal;
+      localStorage.setItem('shpak_user', loginVal);
       showChat();
     } else {
       alert('❌ Неверный пароль');
@@ -171,7 +161,7 @@ function sendMessage() {
   const text = msgInput.value.trim();
   if (!text || !currentUser) return;
   
-  const encText = caesarDoubleEncrypt(text);
+  const encText = encrypt(text); // Шифруем при отправке
   db.ref('messages').push({
     author: currentUser,
     text: encText,
@@ -236,7 +226,7 @@ function toggleMenu() {
 }
 
 // 🎬 АНИМАЦИЯ РАСШИФРОВКИ
-function animateDecrypt(element, encryptedText, decryptedText, speed = 300) {
+function animateDecrypt(element, encryptedText, decryptedText, speed = 150) { // Ускорил до 150мс для красоты
   let currentIndex = 0;
   element.classList.add('decrypting');
   
@@ -268,7 +258,7 @@ function loadChat() {
     const isOutgoing = author === currentUser;
     const isDirector = data.isDirector;
     
-    lastMsg = { text: data.type === 'text' ? caesarDoubleDecrypt(data.text) : '📷 Фото', time: time, author: author };
+    lastMsg = { text: data.type === 'text' ? decrypt(data.text) : '📷 Фото', time: time, author: author };
     
     const msgDiv = document.createElement('div');
     msgDiv.className = `message ${isOutgoing ? 'outgoing' : 'incoming'} ${isDirector ? 'director' : ''}`;
@@ -298,9 +288,9 @@ function loadChat() {
     if (data.type === 'text') {
       const textElement = msgDiv.querySelector('.message-text');
       const encryptedText = data.text;
-      const decryptedText = caesarDoubleDecrypt(data.text);
+      const decryptedText = decrypt(data.text); // Используем новый decrypt (-3)
       setTimeout(() => {
-        animateDecrypt(textElement, encryptedText, decryptedText, 300);
+        animateDecrypt(textElement, encryptedText, decryptedText, 150);
       }, 100);
     }
     

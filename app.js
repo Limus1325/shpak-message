@@ -12,7 +12,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// 🔐 ШИФР ЦЕЗАРЯ (+3 / -3)
+// 🔐 ШИФР ЦЕЗАРЯ
 function encrypt(text) {
   if (!text) return "";
   let res = "";
@@ -47,7 +47,7 @@ function decrypt(text) {
   return res;
 }
 
-// 🔒 ЗАШИФРОВАННЫЕ ДАННЫЕ (Base64 Obfuscation)
+// 🔒 ДАННЫЕ ПОЛЬЗОВАТЕЛЕЙ
 const ENCODED_USERS = [
   { l: 'TE1VU1NT', p: 'MjlJN28yMjBP', r: 'root', n: 'Kirill (Creator)' },
   { l: 'R0VORVJBTCBESVJFQ1RPUg==', p: 'YzVndjFhMm4zaTRhNQ==', r: 'admin', n: 'Vanya (Director)' },
@@ -59,36 +59,28 @@ let currentUser = null;
 let currentChatId = 'general';
 let msgListener = null;
 
-// 🚀 ИНИЦИАЛИЗАЦИЯ БД
+// 🚀 ИНИЦИАЛИЗАЦИЯ
 async function initDB() {
   for (const u of ENCODED_USERS) {
     const login = atob(u.l);
     const pass = atob(u.p);
     const snap = await db.ref('users/' + login).once('value');
     if (!snap.exists()) {
-      await db.ref('users/' + login).set({
-        password: encrypt(pass),
-        role: u.r,
-        displayName: u.n
-      });
+      await db.ref('users/' + login).set({ password: encrypt(pass), role: u.r, displayName: u.n });
     }
   }
   const gen = await db.ref('chats/general').once('value');
   if (!gen.exists()) {
-    await db.ref('chats/general').set({
-      name: 'Общий чат',
-      created: Date.now(),
-      participants: { 'LIMUSSS': true, 'GENERAL DIRECTOR': true, 'TEST': true, 'TEST2': true }
-    });
+    await db.ref('chats/general').set({ name: 'Общий чат', created: Date.now(), participants: { 'LIMUSSS': true, 'GENERAL DIRECTOR': true, 'TEST': true, 'TEST2': true } });
   }
 }
 initDB();
 
-// 🔐 АВТОРИЗАЦИЯ
+// 🔐 ВХОД
 function login() {
   const l = document.getElementById('login').value.trim();
   const p = document.getElementById('pass').value.trim();
-  if (!l || !p) return alert('Введите логин и пароль');
+  if (!l || !p) return alert('Введите данные');
 
   db.ref('users/' + l).once('value').then(snap => {
     if (!snap.exists()) return alert('❌ Пользователь не найден');
@@ -99,29 +91,26 @@ function login() {
     } else {
       alert('❌ Неверный пароль');
     }
-  }).catch(err => alert('❌ Ошибка сети: ' + err.message));
+  });
 }
 
-function logout() {
-  localStorage.removeItem('shpak_user');
-  location.reload();
-}
+function logout() { localStorage.removeItem('shpak_user'); location.reload(); }
 
 function startApp() {
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('sidebar').style.display = 'flex';
   document.getElementById('chat-area').style.display = 'flex';
   document.getElementById('sidebar-user-info').textContent = '👤 ' + currentUser.name;
+  
+  // Панель ROOT только для LIMUSSS
   if (currentUser.role === 'root') document.getElementById('root-panel').style.display = 'flex';
+  
   loadChatsList();
   switchChat('general');
 }
 
 const saved = localStorage.getItem('shpak_user');
-if (saved) {
-  try { currentUser = JSON.parse(saved); startApp(); } 
-  catch(e) { localStorage.removeItem('shpak_user'); }
-}
+if (saved) { try { currentUser = JSON.parse(saved); startApp(); } catch(e) { localStorage.removeItem('shpak_user'); } }
 
 // 💬 ЧАТЫ
 function loadChatsList() {
@@ -134,7 +123,7 @@ function loadChatsList() {
         const div = document.createElement('div');
         div.className = 'chat-item' + (child.key === currentChatId ? ' active' : '');
         div.onclick = () => switchChat(child.key);
-        div.innerHTML = `<div class="chat-avatar">📄</div><div class="chat-info"><div class="chat-name">${chat.name}</div><div class="chat-last" id="last-${child.key}">Загрузка...</div></div>`;
+        div.innerHTML = `<div class="chat-avatar">📄</div><div class="chat-info"><div class="chat-name">${chat.name}</div><div class="chat-last" id="last-${child.key}">...</div></div>`;
         list.appendChild(div);
       }
     });
@@ -144,8 +133,7 @@ function loadChatsList() {
 function switchChat(chatId) {
   currentChatId = chatId;
   document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('active'));
-  const items = document.querySelectorAll('.chat-item');
-  items.forEach(item => { if (item.onclick.toString().includes(chatId)) item.classList.add('active'); });
+  document.querySelectorAll('.chat-item').forEach(item => { if(item.onclick.toString().includes(chatId)) item.classList.add('active'); });
   db.ref('chats/' + chatId).once('value').then(s => document.getElementById('chat-header-name').textContent = s.val().name);
   loadMessages(chatId);
 }
@@ -162,18 +150,27 @@ function renderMessage(data, key, chatId) {
   const container = document.getElementById('messages');
   const isMe = data.author === currentUser.login;
   const time = new Date(data.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  
   const div = document.createElement('div');
-  div.className = `message ${isMe ? 'outgoing' : 'incoming'} ${data.role === 'root' ? 'root-message' : ''}`;
+  // Убрали класс root-message, чтобы не было желтого свечения
+  div.className = `message ${isMe ? 'outgoing' : 'incoming'}`;
   div.dataset.key = key;
 
+  // 🗑️ КОРЗИНА: Видна только Admin и Root. TEST (user) её не видит.
   let delBtn = '';
-  if (currentUser.role === 'admin' || currentUser.role === 'root') delBtn = `<span class="del-btn" onclick="deleteMsg('${chatId}','${key}')">🗑️</span>`;
+  if (currentUser.role === 'admin' || currentUser.role === 'root') {
+    delBtn = `<span class="del-btn" onclick="deleteMsg('${chatId}','${key}')">🗑️</span>`;
+  }
 
   let content = data.type === 'image' 
     ? `<img src="${data.image}" class="photo-preview" onclick="openPhoto('${data.image}','${data.author}','${time}')">`
     : '<div class="msg-text"></div>';
 
-  div.innerHTML = `${!isMe ? `<div class="msg-author">${data.author} ${delBtn}</div>` : `<div class="msg-head-right">${delBtn}</div>`}${content}<div class="msg-meta"><span>${time}</span></div>`;
+  div.innerHTML = `
+    ${!isMe ? `<div class="msg-author">${data.author} ${delBtn}</div>` : `<div class="msg-head-right" style="text-align:right">${delBtn}</div>`}
+    ${content}
+    <div class="msg-meta"><span>${time}</span></div>
+  `;
   container.appendChild(div);
 
   if (data.type === 'text') {
@@ -194,32 +191,37 @@ function sendMessage() {
   const input = document.getElementById('msg-input');
   const text = input.value.trim();
   if (!text) return;
-  let author = currentUser.login;
-  if (currentUser.role === 'root' && document.getElementById('force-input').value.trim() !== '') author = document.getElementById('force-input').value.trim();
   
+  let author = currentUser.login;
+  // Force Sender только для Root
+  if (currentUser.role === 'root' && document.getElementById('force-input').value.trim() !== '') {
+    author = document.getElementById('force-input').value.trim();
+  }
+
   db.ref('messages/' + currentChatId).push({
     author, text: encrypt(text), timestamp: Date.now(), type: 'text', role: currentUser.role
-  }).then(() => { input.value = ''; input.focus(); }).catch(err => alert('❌ Ошибка: ' + err.message));
+  }).then(() => { input.value = ''; input.focus(); });
 }
 
 function deleteMsg(chatId, key) {
   if (currentUser.role !== 'admin' && currentUser.role !== 'root') return;
-  if (confirm('Удалить сообщение?')) db.ref('messages/' + chatId + '/' + key).remove();
+  if (confirm('Удалить?')) db.ref('messages/' + chatId + '/' + key).remove();
 }
 
 function animateDecrypt(el, enc, dec, speed) {
-  let i = 0; el.classList.add('decrypting');
+  let i = 0; 
+  // Убрали класс decrypting, чтобы не было свечения
   const int = setInterval(() => {
     if (i < dec.length) { el.textContent = dec.substring(0, i+1) + enc.substring(i+1); i++; }
-    else { el.textContent = dec; el.classList.remove('decrypting'); clearInterval(int); }
+    else { el.textContent = dec; clearInterval(int); }
   }, speed);
 }
 
 // 🛠️ ROOT TOOLS
-function showSystemInfo() { alert(`📊 System Info\nUser: ${currentUser.login}\nRole: ${currentUser.role.toUpperCase()}\nChat: ${currentChatId}\nMode: GOD MODE`); }
-function forceClearDB() { if (confirm('⚠️ NUKE MODE: Удалить ВСЕ сообщения?')) db.ref('messages/' + currentChatId).remove(); }
+function showSystemInfo() { alert(`📊 System Info\nUser: ${currentUser.login}\nRole: ${currentUser.role.toUpperCase()}\nMode: GOD MODE`); }
+function forceClearDB() { if (confirm('⚠️ NUKE MODE?')) db.ref('messages/' + currentChatId).remove(); }
 
-// 🖼️ & 📎 & 😊 & 🔍 &  & ☰
+// 🖼️ & 📎 & 😊 & 🔍
 function triggerFile() { document.getElementById('file-input').click(); }
 function handleFile(e) {
   const file = e.target.files[0]; if (!file) return;
@@ -252,7 +254,7 @@ function handleSearch(q) {
           d.innerHTML = `<b>${m.author}:</b> ${txt.substring(0,40)}...`;
           d.onclick = () => {
             const el = document.querySelector(`[data-key="${child.key}"]`);
-            if (el) { el.scrollIntoView({behavior:'smooth', block:'center'}); el.style.outline = '2px solid gold'; setTimeout(() => el.style.outline = '', 2000); }
+            if (el) { el.scrollIntoView({behavior:'smooth', block:'center'}); el.style.outline = '2px solid var(--accent)'; setTimeout(() => el.style.outline = '', 2000); }
             closeSearch();
           };
           resDiv.appendChild(d);
@@ -266,8 +268,8 @@ function toggleMenu() { document.getElementById('menu-dropdown').style.display =
 function toggleSidebar() { document.getElementById('sidebar-menu').style.display = document.getElementById('sidebar-menu').style.display === 'none' ? 'block' : 'none'; document.getElementById('menu-dropdown').style.display = 'none'; }
 function closeAllMenus() { document.getElementById('menu-dropdown').style.display = 'none'; document.getElementById('sidebar-menu').style.display = 'none'; }
 function clearChat() { closeAllMenus(); if (currentUser.role === 'admin' || currentUser.role === 'root') { if (confirm('🗑️ Очистить чат?')) db.ref('messages/' + currentChatId).remove(); } else alert('Нет прав'); }
-function showProfile() { closeAllMenus(); alert(`👤 Профиль\nLogin: ${currentUser.login}\nRole: ${currentUser.role.toUpperCase()}\nPower: ${currentUser.role === 'root' ? 'INFINITE' : 'LIMITED'}`); }
-function showAbout() { closeAllMenus(); alert('📄 shpak Message v3.2\nSecure Paper Protocol'); }
+function showProfile() { closeAllMenus(); alert(`👤 Профиль\nLogin: ${currentUser.login}\nRole: ${currentUser.role.toUpperCase()}`); }
+function showAbout() { closeAllMenus(); alert('📄 shpak Message v3.3\nSecure Paper Protocol'); }
 function openNewChatModal() {
   closeAllMenus();
   const list = document.getElementById('user-list'); list.innerHTML = '';
@@ -275,7 +277,7 @@ function openNewChatModal() {
     snap.forEach(child => {
       const login = child.key;
       if (login !== currentUser.login) {
-        const d = document.createElement('label'); d.className = 'user-chk-item'; d.style.display='block'; d.style.padding='5px';
+        const d = document.createElement('label'); d.className = 'user-chk-item';
         d.innerHTML = `<input type="checkbox" value="${login}"> ${login}`;
         list.appendChild(d);
       }

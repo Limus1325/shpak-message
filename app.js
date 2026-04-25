@@ -12,16 +12,21 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// ==========================================
-// 🔐 ШИФР ЦЕЗАРЯ (+3 / -3)
-// ==========================================
-function caesarCipher(text, shift) {
+// 🔐 ШИФР
+function encrypt(text) {
   if (!text) return "";
+  return caesar(text, 3);
+}
+
+function decrypt(text) {
+  if (!text) return "";
+  return caesar(text, -3);
+}
+
+function caesar(text, shift) {
   let result = "";
   for (let i = 0; i < text.length; i++) {
-    const char = text[i];
-    const code = char.charCodeAt(0);
-    
+    const code = text.charCodeAt(i);
     // A-Z
     if (code >= 65 && code <= 90) result += String.fromCharCode(((code - 65 + shift) % 26 + 26) % 26 + 65);
     // a-z
@@ -30,355 +35,428 @@ function caesarCipher(text, shift) {
     else if (code >= 1040 && code <= 1071) result += String.fromCharCode(((code - 1040 + shift) % 32 + 32) % 32 + 1040);
     // а-я
     else if (code >= 1072 && code <= 1103) result += String.fromCharCode(((code - 1072 + shift) % 32 + 32) % 32 + 1072);
-    // Ёё
+    // Ё
     else if (code === 1025) result += String.fromCharCode(((0 + shift) % 32 + 32) % 32 + 1040);
+    // ё
     else if (code === 1105) result += String.fromCharCode(((0 + shift) % 32 + 32) % 32 + 1072);
     // 0-9
     else if (code >= 48 && code <= 57) result += String.fromCharCode(((code - 48 + shift) % 10 + 10) % 10 + 48);
-    else result += char;
+    else result += text[i];
   }
   return result;
 }
 
-function encrypt(text) { return caesarCipher(text, 3); }
-function decrypt(text) { return caesarCipher(text, -3); }
+// 👥 ПОЛЬЗОВАТЕЛИ
+const DEFAULT_USERS = {
+  'Vanya': { pass: 'admin123', role: 'admin', name: 'Ваня (Директор)' },
+  'Kirill': { pass: 'dev123', role: 'dev', name: 'Кирилл (Разраб)' },
+  'TEST': { pass: '12345', role: 'user', name: 'Test User' },
+  'TEST2': { pass: '54321', role: 'user', name: 'Test User 2' }
+};
 
-// ==========================================
-// 🎭 ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
-// ==========================================
+// 🌍 ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
 let currentUser = null;
-let currentChatId = 'general'; // ID текущего чата
-let chatsListener = null;
-let messagesListener = null;
+let currentChatId = 'general';
 
-// Предустановленные пользователи
-const DEFAULT_USERS = [
-    { login: 'Vanya', pass: 'admin123', role: 'admin', name: 'Ваня (Директор)' },
-    { login: 'Kirill', pass: 'dev123', role: 'dev', name: 'Кирилл (Разраб)' },
-    { login: 'TEST', pass: '12345', role: 'user', name: 'Test User 1' },
-    { login: 'TEST2', pass: '54321', role: 'user', name: 'Test User 2' }
-];
-
-// ==========================================
-// 📂 ИНИЦИАЛИЗАЦИЯ БАЗЫ
-// ==========================================
+// 🚀 ИНИЦИАЛИЗАЦИЯ
 async function initDB() {
-    // Создаем пользователей, если их нет
-    for (const user of DEFAULT_USERS) {
-        const snap = await db.ref('users/' + user.login).once('value');
-        if (!snap.exists()) {
-            await db.ref('users/' + user.login).set({
-                password: encrypt(user.pass),
-                role: user.role,
-                displayName: user.name
-            });
-        }
+  // Создаем пользователей
+  for (const [login, data] of Object.entries(DEFAULT_USERS)) {
+    const snap = await db.ref('users/' + login).once('value');
+    if (!snap.exists()) {
+      await db.ref('users/' + login).set({
+        password: encrypt(data.pass),
+        role: data.role,
+        displayName: data.name
+      });
+      console.log('✅ Создан:', login);
     }
-
-    // Создаем общий чат, если его нет
-    const generalSnap = await db.ref('chats/general').once('value');
-    if (!generalSnap.exists()) {
-        await db.ref('chats/general').set({
-            name: 'Общий чат',
-            created: Date.now(),
-            participants: { 'Vanya': true, 'Kirill': true, 'TEST': true, 'TEST2': true }
-        });
-    }
+  }
+  
+  // Создаем общий чат
+  const generalSnap = await db.ref('chats/general').once('value');
+  if (!generalSnap.exists()) {
+    await db.ref('chats/general').set({
+      name: 'Общий чат',
+      created: Date.now(),
+      participants: { 'Vanya': true, 'Kirill': true, 'TEST': true, 'TEST2': true }
+    });
+    console.log('✅ Общий чат создан');
+  }
 }
 initDB();
 
-// ==========================================
-// 🔐 АВТОРИЗАЦИЯ
-// ==========================================
-function login() {
-  const l = document.getElementById('login').value.trim();
-  const p = document.getElementById('pass').value.trim();
+// 🔐 ВХОД
+document.getElementById('btn-enter').onclick = function() {
+  const login = document.getElementById('login').value.trim();
+  const pass = document.getElementById('pass').value.trim();
   
-  if (!l || !p) return alert('Введите логин и пароль');
-
-  db.ref('users/' + l).once('value').then(snap => {
+  if (!login || !pass) return alert('Введите логин и пароль');
+  
+  db.ref('users/' + login).once('value').then(snap => {
     if (!snap.exists()) return alert('❌ Пользователь не найден');
-    
-    if (snap.val().password === encrypt(p)) {
-      currentUser = {
-          login: l,
-          role: snap.val().role,
-          name: snap.val().displayName || l
-      };
-      localStorage.setItem('shpak_user_json', JSON.stringify(currentUser));
+    const userData = snap.val();
+    if (userData.password === encrypt(pass)) {
+      currentUser = { login, role: userData.role, name: userData.displayName || login };
+      localStorage.setItem('shpak_user', JSON.stringify(currentUser));
       startApp();
     } else {
       alert('❌ Неверный пароль');
     }
   });
-}
+};
 
-function logout() {
-  localStorage.removeItem('shpak_user_json');
+// 🚪 ВЫХОД
+document.getElementById('btn-logout').onclick = function() {
+  localStorage.removeItem('shpak_user');
   location.reload();
-}
+};
 
+// 📱 ЗАПУСК ПРИЛОЖЕНИЯ
 function startApp() {
-    document.getElementById('auth-screen').style.display = 'none';
-    document.getElementById('sidebar').style.display = 'flex';
-    document.getElementById('chat-area').style.display = 'flex';
-    document.getElementById('sidebar-user-info').textContent = `👤 ${currentUser.name}`;
-    
-    loadChatsList();
-    joinChat('general'); // По умолчанию входим в общий чат
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('sidebar').style.display = 'flex';
+  document.getElementById('chat-area').style.display = 'flex';
+  document.getElementById('sidebar-user-info').textContent = '👤 ' + currentUser.name;
+  
+  loadChats();
+  joinChat('general');
 }
 
 // Проверка сессии
-const savedUser = localStorage.getItem('shpak_user_json');
-if (savedUser) {
-    currentUser = JSON.parse(savedUser);
-    startApp();
+const saved = localStorage.getItem('shpak_user');
+if (saved) {
+  currentUser = JSON.parse(saved);
+  startApp();
 }
 
-// ==========================================
-// 💬 СИСТЕМА ЧАТОВ
-// ==========================================
-
-// Загрузка списка чатов в сайдбар
-function loadChatsList() {
-    const listDiv = document.getElementById('chat-list');
+// 💬 ЗАГРУЗКА СПИСКА ЧАТОВ
+function loadChats() {
+  const listDiv = document.getElementById('chat-list');
+  
+  db.ref('chats').on('value', snap => {
     listDiv.innerHTML = '';
-
-    db.ref('chats').on('value', snap => {
-        listDiv.innerHTML = '';
-        snap.forEach(child => {
-            const chat = child.val();
-            const chatId = child.key;
-            
-            // Проверяем, есть ли текущий юзер в участниках
-            if (chat.participants && chat.participants[currentUser.login]) {
-                const div = document.createElement('div');
-                div.className = `chat-item ${chatId === currentChatId ? 'active' : ''}`;
-                div.onclick = () => joinChat(chatId);
-                div.innerHTML = `
-                    <div class="chat-avatar">📄</div>
-                    <div class="chat-info">
-                        <div class="chat-top">
-                            <div class="chat-name">${chat.name}</div>
-                        </div>
-                        <div class="chat-last-message" id="last-msg-${chatId}">Загрузка...</div>
-                    </div>
-                `;
-                listDiv.appendChild(div);
-            }
-        });
+    snap.forEach(child => {
+      const chat = child.val();
+      const chatId = child.key;
+      
+      if (chat.participants && chat.participants[currentUser.login]) {
+        const div = document.createElement('div');
+        div.className = 'chat-item' + (chatId === currentChatId ? ' active' : '');
+        div.onclick = () => joinChat(chatId);
+        div.innerHTML = `
+          <div class="chat-avatar">📄</div>
+          <div class="chat-info">
+            <div class="chat-name">${chat.name}</div>
+            <div class="chat-last-message" id="last-${chatId}">Загрузка...</div>
+          </div>
+        `;
+        listDiv.appendChild(div);
+      }
     });
+  });
 }
 
-// Вход в конкретный чат
+// 🚪 ВОЙТИ В ЧАТ
 function joinChat(chatId) {
-    currentChatId = chatId;
-    
-    // Обновляем UI активного чата
-    document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('active'));
-    // (Простой хак для подсветки, в реальном проекте лучше через ID)
-    
-    // Очищаем старые слушатели сообщений
-    if (messagesListener) db.ref(`messages/${currentChatId}`).off('child_added', messagesListener);
-
-    // Загружаем заголовок чата
-    db.ref(`chats/${chatId}`).once('value').then(snap => {
-        const chatName = snap.val().name;
-        document.querySelector('.chat-header-name').textContent = chatName;
-    });
-
-    loadMessages(chatId);
+  currentChatId = chatId;
+  
+  // Обновляем активный чат в списке
+  document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('active'));
+  const activeItem = Array.from(document.querySelectorAll('.chat-item')).find(el => el.onclick.toString().includes(chatId));
+  if (activeItem) activeItem.classList.add('active');
+  
+  // Загружаем название чата
+  db.ref('chats/' + chatId).once('value').then(snap => {
+    document.getElementById('chat-header-name').textContent = snap.val().name;
+  });
+  
+  // Загружаем сообщения
+  loadMessages(chatId);
 }
 
-// Загрузка сообщений конкретного чата
+// 📜 ЗАГРУЗКА СООБЩЕНИЙ
 function loadMessages(chatId) {
-    const messagesDiv = document.getElementById('messages');
-    messagesDiv.innerHTML = '';
-
-    messagesListener = db.ref(`messages/${chatId}`).limitToLast(50).on('child_added', snap => {
-        const data = snap.val();
-        renderMessage(data, snap.key);
-    });
+  const messagesDiv = document.getElementById('messages');
+  messagesDiv.innerHTML = '';
+  
+  db.ref('messages/' + chatId).limitToLast(50).on('child_added', snap => {
+    const data = snap.val();
+    renderMessage(data, snap.key, chatId);
+  });
 }
 
-// Отрисовка одного сообщения
-function renderMessage(data, key) {
-    const messagesDiv = document.getElementById('messages');
-    const isMe = data.author === currentUser.login;
-    const time = new Date(data.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-    
-    const msgDiv = document.createElement('div');
-    msgDiv.className = `message ${isMe ? 'outgoing' : 'incoming'}`;
-    msgDiv.setAttribute('data-key', key);
-
-    // Кнопка удаления для Админа/Разраба
-    let deleteBtn = '';
-    if (currentUser.role === 'admin' || currentUser.role === 'dev') {
-        deleteBtn = `<span style="float:right; cursor:pointer; color:red;" onclick="deleteMessage('${currentChatId}', '${key}')">🗑️</span>`;
-    }
-
-    let contentHtml = '';
-    if (data.type === 'image') {
-        contentHtml = `<img src="${data.image}" class="photo-preview" onclick="openPhotoModal('${data.image}', '${data.author}', '${time}')">`;
-    } else {
-        contentHtml = `<div class="message-text"></div>`;
-    }
-
-    msgDiv.innerHTML = `
-        ${!isMe ? `<div class="message-author">${data.author} ${deleteBtn}</div>` : `<div style="text-align:right">${deleteBtn}</div>`}
-        ${contentHtml}
-        <div class="message-meta">
-            <span class="message-time">${time}</span>
-        </div>
-    `;
-    
-    messagesDiv.appendChild(msgDiv);
-
-    if (data.type === 'text') {
-        const textEl = msgDiv.querySelector('.message-text');
-        animateDecrypt(textEl, data.text, decrypt(data.text), 50);
-    }
-    
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+// 🎨 ОТРИСОВКА СООБЩЕНИЯ
+function renderMessage(data, key, chatId) {
+  const messagesDiv = document.getElementById('messages');
+  const isMe = data.author === currentUser.login;
+  const time = new Date(data.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  
+  const msgDiv = document.createElement('div');
+  msgDiv.className = 'message' + (isMe ? ' outgoing' : ' incoming');
+  msgDiv.setAttribute('data-key', key);
+  
+  // Кнопка удаления для админов
+  let deleteBtn = '';
+  if (currentUser.role === 'admin' || currentUser.role === 'dev') {
+    deleteBtn = '<span style="float:right;cursor:pointer;color:#d4753a;" onclick="deleteMessage(\'' + chatId + '\',\'' + key + '\')">🗑️</span>';
+  }
+  
+  let content = '';
+  if (data.type === 'image') {
+    content = '<img src="' + data.image + '" class="photo-preview" onclick="openPhotoModal(\'' + data.image + '\',\'' + data.author + '\',\'' + time + '\')">';
+  } else {
+    content = '<div class="message-text"></div>';
+  }
+  
+  msgDiv.innerHTML = `
+    ${!isMe ? '<div class="message-author">' + data.author + ' ' + deleteBtn + '</div>' : '<div style="text-align:right">' + deleteBtn + '</div>'}
+    ${content}
+    <div class="message-meta"><span class="message-time">${time}</span></div>
+  `;
+  
+  messagesDiv.appendChild(msgDiv);
+  
+  if (data.type === 'text') {
+    const textEl = msgDiv.querySelector('.message-text');
+    animateDecrypt(textEl, data.text, decrypt(data.text), 50);
+  }
+  
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  
+  // Обновляем последнее сообщение в сайдбаре
+  const lastText = data.type === 'text' ? decrypt(data.text).substring(0, 25) : '📷 Фото';
+  const lastEl = document.getElementById('last-' + chatId);
+  if (lastEl) lastEl.textContent = data.author + ': ' + lastText;
 }
 
-// Удаление сообщения (только для админов)
+// 🗑️ УДАЛИТЬ СООБЩЕНИЕ
 function deleteMessage(chatId, msgKey) {
-    if (currentUser.role !== 'admin' && currentUser.role !== 'dev') return;
-    if (confirm('Удалить это сообщение?')) {
-        db.ref(`messages/${chatId}/${msgKey}`).remove();
-    }
+  if (currentUser.role !== 'admin' && currentUser.role !== 'dev') return;
+  db.ref('messages/' + chatId + '/' + msgKey).remove();
 }
 
-// Отправка сообщения в ТЕКУЩИЙ чат
+// 💬 ОТПРАВИТЬ СООБЩЕНИЕ
 function sendMessage() {
-    const text = document.getElementById('msg-input').value.trim();
-    if (!text || !currentUser) return;
-    
-    db.ref(`messages/${currentChatId}`).push({
-        author: currentUser.login,
-        text: encrypt(text),
-        timestamp: Date.now(),
-        type: 'text'
-    });
-    document.getElementById('msg-input').value = '';
+  const input = document.getElementById('msg-input');
+  const text = input.value.trim();
+  if (!text || !currentUser) return;
+  
+  db.ref('messages/' + currentChatId).push({
+    author: currentUser.login,
+    text: encrypt(text),
+    timestamp: Date.now(),
+    type: 'text'
+  });
+  input.value = '';
+  input.focus();
 }
 
-// ==========================================
-// 🆕 СОЗДАНИЕ НОВЫХ ЧАТОВ
-// ==========================================
+document.getElementById('btn-send').onclick = sendMessage;
+document.getElementById('msg-input').addEventListener('keypress', e => {
+  if (e.key === 'Enter') sendMessage();
+});
 
-function showNewChatModal() {
-    const modal = document.getElementById('new-chat-modal');
-    const list = document.getElementById('user-select-list');
-    list.innerHTML = '';
-    
-    // Загружаем всех пользователей для выбора
-    db.ref('users').once('value').then(snap => {
-        snap.forEach(child => {
-            const uLogin = child.key;
-            if (uLogin !== currentUser.login) { // Не показываем себя
-                const div = document.createElement('div');
-                div.className = 'user-select-item';
-                div.innerHTML = `
-                    <input type="checkbox" value="${uLogin}" class="user-checkbox">
-                    <span>${uLogin}</span>
-                `;
-                list.appendChild(div);
-            }
-        });
+// 🎬 АНИМАЦИЯ РАСШИФРОВКИ
+function animateDecrypt(el, encrypted, decrypted, speed) {
+  let i = 0;
+  el.classList.add('decrypting');
+  const interval = setInterval(() => {
+    if (i < decrypted.length) {
+      el.textContent = decrypted.substring(0, i+1) + encrypted.substring(i+1);
+      i++;
+    } else {
+      el.textContent = decrypted;
+      el.classList.remove('decrypting');
+      clearInterval(interval);
+    }
+  }, speed);
+}
+
+// 📎 ПРИКРЕПИТЬ ФОТО
+function attachFile() {
+  document.getElementById('file-input').click();
+}
+
+function handleFileSelect(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    db.ref('messages/' + currentChatId).push({
+      author: currentUser.login,
+      image: e.target.result,
+      timestamp: Date.now(),
+      type: 'image'
     });
-    
-    modal.style.display = 'flex';
+  };
+  reader.readAsDataURL(file);
+}
+
+// 🖼️ ПРОСМОТР ФОТО
+function openPhotoModal(src, author, time) {
+  document.getElementById('modal-image').src = src;
+  document.getElementById('modal-info').textContent = '📷 ' + author + ' • ' + time;
+  document.getElementById('photo-modal').style.display = 'flex';
+}
+
+function closePhotoModal(e) {
+  if (!e || e.target.id === 'photo-modal' || e.target.className === 'close-modal') {
+    document.getElementById('photo-modal').style.display = 'none';
+  }
+}
+
+// 😊 ЭМОДЗИ
+function toggleEmojiPicker() {
+  const picker = document.getElementById('emoji-picker');
+  picker.style.display = picker.style.display === 'none' ? 'block' : 'none';
+}
+
+function insertEmoji(emoji) {
+  document.getElementById('msg-input').value += emoji;
+  document.getElementById('emoji-picker').style.display = 'none';
+}
+
+// ⋮ МЕНЮ
+function toggleMenu() {
+  const menu = document.getElementById('menu-dropdown');
+  menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+  document.getElementById('sidebar-menu').style.display = 'none';
+}
+
+function showProfile() {
+  closeAllMenus();
+  alert('👤 Профиль\n\nЛогин: ' + currentUser.login + '\nИмя: ' + currentUser.name + '\nРоль: ' + currentUser.role);
+}
+
+function clearChat() {
+  closeAllMenus();
+  if (currentUser.role === 'admin' || currentUser.role === 'dev') {
+    if (confirm('🗑️ Очистить весь чат?')) {
+      db.ref('messages/' + currentChatId).remove();
+    }
+  } else {
+    alert('Только администраторы могут очищать чат');
+  }
+}
+
+function showAbout() {
+  closeAllMenus();
+  alert('📄 shpak Message v2.0\n\nБумажный мессенджер с шифрованием\n\nДиректор: Ваня\nРазработчик: Кирилл');
+}
+
+function closeAllMenus() {
+  document.getElementById('menu-dropdown').style.display = 'none';
+  document.getElementById('sidebar-menu').style.display = 'none';
+}
+
+// ☰ БОКОВОЕ МЕНЮ
+function toggleSidebarMenu() {
+  const menu = document.getElementById('sidebar-menu');
+  menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+  document.getElementById('menu-dropdown').style.display = 'none';
+}
+
+// 🔍 ПОИСК
+function showSearch() {
+  document.getElementById('search-overlay').style.display = 'block';
+  document.getElementById('search-input').focus();
+}
+
+function closeSearch() {
+  document.getElementById('search-overlay').style.display = 'none';
+  document.getElementById('search-results').innerHTML = '';
+}
+
+function handleSearch(query) {
+  const resultsDiv = document.getElementById('search-results');
+  if (query.length < 2) {
+    resultsDiv.innerHTML = '';
+    return;
+  }
+  
+  db.ref('messages/' + currentChatId).limitToLast(50).once('value').then(snap => {
+    resultsDiv.innerHTML = '';
+    let found = false;
+    snap.forEach(child => {
+      const msg = child.val();
+      if (msg.type === 'text') {
+        const text = decrypt(msg.text);
+        if (text.toLowerCase().includes(query.toLowerCase())) {
+          found = true;
+          const div = document.createElement('div');
+          div.className = 'search-result-item';
+          div.innerHTML = '<strong>' + msg.author + ':</strong> ' + text.substring(0, 50);
+          div.onclick = () => {
+            const el = document.querySelector('[data-key="' + child.key + '"]');
+            if (el) {
+              el.scrollIntoView({behavior: 'smooth', block: 'center'});
+              el.style.border = '2px solid var(--accent)';
+              setTimeout(() => el.style.border = '', 2000);
+            }
+            closeSearch();
+          };
+          resultsDiv.appendChild(div);
+        }
+      }
+    });
+    if (!found) resultsDiv.innerHTML = '<div style="padding:10px;text-align:center;">Ничего не найдено</div>';
+  });
+}
+
+// ➕ СОЗДАНИЕ ЧАТА
+function showNewChatModal() {
+  closeAllMenus();
+  const modal = document.getElementById('new-chat-modal');
+  const list = document.getElementById('user-select-list');
+  list.innerHTML = '';
+  
+  db.ref('users').once('value').then(snap => {
+    snap.forEach(child => {
+      const login = child.key;
+      if (login !== currentUser.login) {
+        const div = document.createElement('div');
+        div.className = 'user-select-item';
+        div.innerHTML = '<input type="checkbox" value="' + login + '" class="user-chk"> ' + login;
+        list.appendChild(div);
+      }
+    });
+  });
+  
+  modal.style.display = 'flex';
 }
 
 function closeNewChatModal() {
-    document.getElementById('new-chat-modal').style.display = 'none';
+  document.getElementById('new-chat-modal').style.display = 'none';
 }
 
 function createNewChat() {
-    const name = document.getElementById('new-chat-name').value.trim();
-    if (!name) return alert('Введите название чата');
-    
-    const checkboxes = document.querySelectorAll('.user-checkbox:checked');
-    if (checkboxes.length === 0) return alert('Выберите хотя бы одного участника');
-    
-    const participants = { [currentUser.login]: true };
-    checkboxes.forEach(cb => {
-        participants[cb.value] = true;
-    });
-    
-    const newChatRef = db.ref('chats').push();
-    newChatRef.set({
-        name: name,
-        created: Date.now(),
-        participants: participants
-    });
-    
-    closeNewChatModal();
-    // Автоматически переходим в новый чат
-    joinChat(newChatRef.key);
+  const name = document.getElementById('new-chat-name').value.trim();
+  if (!name) return alert('Введите название чата');
+  
+  const checkboxes = document.querySelectorAll('.user-chk:checked');
+  if (checkboxes.length === 0) return alert('Выберите участников');
+  
+  const participants = { [currentUser.login]: true };
+  checkboxes.forEach(cb => participants[cb.value] = true);
+  
+  const newChatRef = db.ref('chats').push();
+  newChatRef.set({
+    name: name,
+    created: Date.now(),
+    participants: participants
+  });
+  
+  closeNewChatModal();
+  joinChat(newChatRef.key);
 }
 
-// ==========================================
-// 🖼️ ФОТО И ЭМОДЗИ (Без изменений логики)
-// ==========================================
-function attachFile() { document.getElementById('file-input').click(); }
-function handleFileSelect(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        db.ref(`messages/${currentChatId}`).push({
-            author: currentUser.login,
-            image: e.target.result,
-            timestamp: Date.now(),
-            type: 'image'
-        });
-    };
-    reader.readAsDataURL(file);
-}
-
-function openPhotoModal(src, author, time) {
-    document.getElementById('modal-image').src = src;
-    document.getElementById('modal-info').textContent = `📷 Фото от ${author} • ${time}`;
-    document.getElementById('photo-modal').style.display = 'flex';
-}
-function closePhotoModal(e) {
-    if (e && e.target.id !== 'photo-modal' && e.target.className !== 'close-modal') return;
-    document.getElementById('photo-modal').style.display = 'none';
-}
-
-function toggleEmojiPicker() {
-    const picker = document.getElementById('emoji-picker');
-    picker.style.display = picker.style.display === 'none' ? 'block' : 'none';
-}
-function insertEmoji(emoji) {
-    document.getElementById('msg-input').value += emoji;
-    document.getElementById('emoji-picker').style.display = 'none';
-}
-
-// ==========================================
-// 🔍 ПОИСК И МЕНЮ (Базовая логика)
-// ==========================================
-function showSearch() { alert('Поиск по текущему чату: в разработке'); }
-function showMenu() { 
-    const menu = document.getElementById('menu-dropdown');
-    menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
-}
-function clearChat() {
-    if (currentUser.role === 'admin' || currentUser.role === 'dev') {
-        if(confirm('Очистить весь чат?')) db.ref(`messages/${currentChatId}`).remove();
-    } else {
-        alert('Только Админ или Разработчик могут очищать чат');
-    }
-}
-function showAbout() {
-    alert(`shpak Message v2.0\nUser: ${currentUser.name}\nRole: ${currentUser.role}`);
-}
-
-// Привязка кнопок
-document.getElementById('btn-enter').onclick = login;
-document.getElementById('btn-logout').onclick = logout;
-document.getElementById('btn-send').onclick = sendMessage;
-document.getElementById('msg-input').addEventListener('keypress', e => { if(e.key==='Enter') sendMessage(); });
+// Закрытие меню при клике снаружи
+document.addEventListener('click', e => {
+  if (!e.target.closest('.header-btn') && !e.target.closest('.menu-dropdown')) {
+    document.getElementById('menu-dropdown').style.display = 'none';
+  }
+  if (!e.target.closest('.menu-btn') && !e.target.closest('.sidebar-menu')) {
+    document.getElementById('sidebar-menu').style.display = 'none';
+  }
+});

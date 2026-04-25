@@ -420,21 +420,58 @@ let callListener = null;
 const ICE_SERVERS = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
 // Запуск слушателя входящих звонков
+let pendingCallId = null;
+let pendingCaller = null;
+
 function listenForCalls() {
   if (callListener) db.ref('calls').off('child_added', callListener);
   
   callListener = db.ref('calls').orderByChild('to').equalTo(currentUser.login).on('child_added', snap => {
     const callData = snap.val();
-    if (callData.status === 'offering' && callData.id !== 'ended') {
-      // Входящий звонок
-      if (confirm(`📞 Входящий звонок от ${callData.from}! Принять?`)) {
-        acceptCall(snap.key, callData);
-      } else {
-        // Отклонить
-        db.ref('calls/' + snap.key).update({ status: 'rejected' });
-      }
+    
+    // Если звонок еще активен (не отменен и не принят кем-то другим)
+    if (callData.status === 'offering') {
+      pendingCallId = snap.key;
+      pendingCaller = callData.from;
+      
+      // Показываем красивое уведомление вместо alert
+      showIncomingCallUI(callData.from);
     }
   });
+}
+
+function showIncomingCallUI(caller) {
+  const toast = document.getElementById('incoming-call-toast');
+  document.getElementById('caller-name').textContent = caller;
+  toast.style.display = 'block';
+  
+  // Звук звонка (опционально)
+  // const audio = new Audio('ringtone.mp3'); 
+  // audio.play().catch(e => console.log('Autoplay blocked'));
+}
+
+function acceptIncomingCall() {
+  document.getElementById('incoming-call-toast').style.display = 'none';
+  if (pendingCallId && pendingCaller) {
+    // Получаем данные звонка из базы, чтобы найти activeRef
+    db.ref('calls/' + pendingCallId).once('value').then(snap => {
+      const data = snap.val();
+      if (data && data.activeRef) {
+        acceptCall(pendingCallId, data);
+      } else {
+        alert('Ошибка: данные звонка не найдены');
+      }
+    });
+  }
+}
+
+function rejectIncomingCall() {
+  document.getElementById('incoming-call-toast').style.display = 'none';
+  if (pendingCallId) {
+    db.ref('calls/' + pendingCallId).update({ status: 'rejected' });
+    pendingCallId = null;
+    pendingCaller = null;
+  }
 }
 
 async function startCall() {

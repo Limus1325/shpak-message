@@ -105,5 +105,45 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
   <script src="app.js"></script>
+  <!-- Модальное окно для просмотра фото -->
+<div id="photo-modal" class="photo-modal" style="display:none;" onclick="closePhotoModal(event)">
+  <div class="photo-modal-content" onclick="event.stopPropagation()">
+    <button class="close-modal" onclick="closePhotoModal()">✕</button>
+    <img id="modal-image" src="" alt="Full size photo">
+    <div class="photo-modal-info" id="modal-info"></div>
+  </div>
+</div>
+
+<!-- Меню (три точки) -->
+<div id="menu-dropdown" class="menu-dropdown" style="display:none;">
+  <div class="menu-item" onclick="showProfile()">👤 Профиль</div>
+  <div class="menu-item" onclick="clearChat()">🗑️ Очистить чат</div>
+  <div class="menu-item" onclick="toggleTheme()">🎨 Тема</div>
+  <div class="menu-item" onclick="showAbout()">ℹ️ О приложении</div>
+</div>
+
+<!-- Боковое меню (три полоски) -->
+<div id="sidebar-menu" class="sidebar-menu" style="display:none;">
+  <div class="sidebar-menu-header">
+    <h3>📄 shpak Message</h3>
+    <button onclick="toggleSidebarMenu()">✕</button>
+  </div>
+  <div class="sidebar-menu-items">
+    <div class="menu-item" onclick="showProfile()">👤 Мой профиль</div>
+    <div class="menu-item" onclick="showSettings()">⚙️ Настройки</div>
+    <div class="menu-item" onclick="showContacts()">📞 Контакты</div>
+    <div class="menu-item" onclick="toggleTheme()">🎨 Сменить тему</div>
+    <div class="menu-item" onclick="showAbout()">ℹ️ О приложении</div>
+  </div>
+</div>
+
+<!-- Окно поиска -->
+<div id="search-overlay" class="search-overlay" style="display:none;">
+  <div class="search-box-container">
+    <input type="text" id="search-messages" placeholder="Поиск по сообщениям..." oninput="searchMessages(this.value)">
+    <button onclick="closeSearch()">✕</button>
+  </div>
+  <div id="search-results" class="search-results"></div>
+</div>
 </body>
 </html>

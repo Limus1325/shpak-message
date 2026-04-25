@@ -12,7 +12,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// 🔐 ШИФР (Работает идеально)
+// 🔐 ШИФР ЦЕЗАРЯ (+3 / -3)
 function encrypt(text) {
   if (!text) return "";
   let res = "";
@@ -47,30 +47,35 @@ function decrypt(text) {
   return res;
 }
 
-// 👥 ПОЛЬЗОВАТЕЛИ И ПРАВА
-const DEFAULT_USERS = {
-  'LIMUSSS': { pass: 'dev123', role: 'root', name: 'Kirill (Creator)' },
-  'GENERAL DIRECTOR': { pass: 'admin123', role: 'admin', name: 'Vanya (Director)' },
-  'TEST': { pass: '12345', role: 'user', name: 'Test User' },
-  'TEST2': { pass: '54321', role: 'user', name: 'Test User 2' }
-};
+// 🔒 ЗАШИФРОВАННЫЕ УЧЕТНЫЕ ДАННЫЕ (Base64 Obfuscation)
+// В исходном коде нет открытых паролей. Декодируются только в runtime.
+const ENCODED_USERS = [
+  { l: 'TE1VU1NT', p: 'MjlJN28yMjBP', r: 'root', n: 'Kirill (Creator)' },
+  { l: 'R0VORVJBTCBESVJFQ1RPUg==', p: 'YzVndjFhMm4zaTRhNQ==', r: 'admin', n: 'Vanya (Director)' },
+  { l: 'VEVTVA==', p: 'MTIzNDU=', r: 'user', n: 'Test User' },
+  { l: 'VEVTVDI=', p: 'NTQzMjE=', r: 'user', n: 'Test User 2' }
+];
 
 let currentUser = null;
 let currentChatId = 'general';
 let msgListener = null;
 
-// 🚀 ИНИЦИАЛИЗАЦИЯ
+// 🚀 ИНИЦИАЛИЗАЦИЯ БД
 async function initDB() {
-  for (const [login, data] of Object.entries(DEFAULT_USERS)) {
+  for (const u of ENCODED_USERS) {
+    const login = atob(u.l); // Декодируем логин
+    const pass = atob(u.p);  // Декодируем пароль
+    
     const snap = await db.ref('users/' + login).once('value');
     if (!snap.exists()) {
       await db.ref('users/' + login).set({
-        password: encrypt(data.pass),
-        role: data.role,
-        displayName: data.name
+        password: encrypt(pass), // Шифруем перед записью в Firebase
+        role: u.r,
+        displayName: u.n
       });
     }
   }
+  
   const gen = await db.ref('chats/general').once('value');
   if (!gen.exists()) {
     await db.ref('chats/general').set({
@@ -97,7 +102,7 @@ function login() {
     } else {
       alert('❌ Неверный пароль');
     }
-  });
+  }).catch(err => alert('❌ Ошибка сети: ' + err.message));
 }
 
 function logout() {
@@ -109,9 +114,9 @@ function startApp() {
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('sidebar').style.display = 'flex';
   document.getElementById('chat-area').style.display = 'flex';
-  document.getElementById('sidebar-user-info').textContent = `👤 ${currentUser.name}`;
+  document.getElementById('sidebar-user-info').textContent = '👤 ' + currentUser.name;
   
-  // Если ROOT - показываем спец. панель
+  // Активируем панель GOD MODE только для ROOT
   if (currentUser.role === 'root') {
     document.getElementById('root-panel').style.display = 'flex';
   }
@@ -188,13 +193,11 @@ function renderMessage(data, key, chatId) {
   const time = new Date(data.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
   
   const div = document.createElement('div');
-  // ROOT получает золотую рамку
   const isRootMsg = data.role === 'root';
   div.className = `message ${isMe ? 'outgoing' : 'incoming'} ${isRootMsg ? 'root-message' : ''}`;
   div.dataset.key = key;
 
   let delBtn = '';
-  // ADMIN и ROOT могут удалять
   if (currentUser.role === 'admin' || currentUser.role === 'root') {
     delBtn = `<span class="del-btn" onclick="deleteMsg('${chatId}','${key}')">🗑️</span>`;
   }
@@ -232,8 +235,8 @@ function sendMessage() {
   const text = input.value.trim();
   if (!text) return;
 
-  // Если FORCE режим (от имени другого)
   let author = currentUser.login;
+  // ROOT может писать от имени других
   if (currentUser.role === 'root' && document.getElementById('force-input').value.trim() !== '') {
     author = document.getElementById('force-input').value.trim();
   }
@@ -243,11 +246,11 @@ function sendMessage() {
     text: encrypt(text),
     timestamp: Date.now(),
     type: 'text',
-    role: currentUser.role // Сохраняем роль для подсветки
+    role: currentUser.role
   }).then(() => {
     input.value = '';
     input.focus();
-  });
+  }).catch(err => alert('❌ Ошибка отправки: ' + err.message));
 }
 
 function deleteMsg(chatId, key) {
@@ -273,28 +276,20 @@ function animateDecrypt(el, enc, dec, speed) {
 }
 
 // ==========================================
-// 🛠️ ФУНКЦИИ ДЛЯ ROOT (LIMUSSS)
+// 🛠️ ROOT TOOLS (LIMUSSS)
 // ==========================================
-function showRootTools() {
-  const panel = document.getElementById('root-panel');
-  panel.style.display = panel.style.display === 'none' ? 'flex' : 'none';
+function showSystemInfo() {
+  alert(`📊 System Info\nUser: ${currentUser.login}\nRole: ${currentUser.role.toUpperCase()}\nChat ID: ${currentChatId}\nPermissions: GOD MODE ACTIVE`);
 }
 
 function forceClearDB() {
-  if (confirm('⚠️ ВНИМАНИЕ: Это удалит ВСЕ сообщения в текущем чате безвозвратно!')) {
+  if (confirm('⚠️ NUKE MODE: Удалить ВСЕ сообщения в этом чате?')) {
     db.ref('messages/' + currentChatId).remove();
   }
 }
 
-function showSystemInfo() {
-  db.ref('chats/' + currentChatId + '/messages').limitToFirst(1).once('value').then(s => {
-    let count = s.numChildren(); // Примерное кол-во
-    alert(`📊 System Info\nUser: ${currentUser.login}\nRole: ${currentUser.role}\nChat ID: ${currentChatId}\nPermissions: GOD MODE`);
-  });
-}
-
 // ==========================================
-// 🖼️ & 📎 & 😊 (Остальное)
+// 🖼️ & 📎 & 😊 & 🔍 & ⋮ & ☰
 // ==========================================
 function triggerFile() { document.getElementById('file-input').click(); }
 function handleFile(e) {
@@ -386,7 +381,7 @@ function showProfile() {
   closeAllMenus();
   alert(`👤 Профиль\nLogin: ${currentUser.login}\nRole: ${currentUser.role.toUpperCase()}\nPower: ${currentUser.role === 'root' ? 'INFINITE' : 'LIMITED'}`);
 }
-function showAbout() { closeAllMenus(); alert('📄 shpak Message v3.0\nRoot: LIMUSSS\nAdmin: GENERAL DIRECTOR'); }
+function showAbout() { closeAllMenus(); alert('📄 shpak Message v3.1\nSecure Paper Protocol'); }
 function openNewChatModal() {
   closeAllMenus();
   const list = document.getElementById('user-list');

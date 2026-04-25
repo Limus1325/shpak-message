@@ -438,7 +438,10 @@ function listenForCalls() {
 }
 
 async function startCall() {
-  // Получаем доступ к микрофону
+  // 1. Спрашиваем, кому звоним
+  let targetUser = prompt("Введите логин того, кому звоним:");
+  if (!targetUser) return;
+
   try {
     localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
     document.getElementById('call-overlay').style.display = 'flex';
@@ -447,32 +450,28 @@ async function startCall() {
     peerConnection = new RTCPeerConnection(ICE_SERVERS);
     localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
     
-    // Обработка входящего потока (голос собеседника)
     peerConnection.ontrack = event => {
       document.getElementById('remote-audio').srcObject = event.streams[0];
       document.getElementById('call-status').textContent = 'Разговор';
       startCallTimer();
     };
     
-    // ICE Candidates
     peerConnection.onicecandidate = event => {
       if (event.candidate) {
         db.ref('calls/active/' + callId + '/candidates').push(encrypt(JSON.stringify(event.candidate.toJSON())));
       }
     };
     
-    // Создаем Offer
     const offer = await peerConnection.createOffer();
     await peerConnection.setLocalDescription(offer);
     
-    // Генерируем ID звонка
     callId = db.ref('calls').push().key;
     const activeCallId = db.ref('calls/active').push().key;
 
-    // Сохраняем зашифрованный Offer в базу
+    // 2. Используем введенный логин вместо 'GENERAL DIRECTOR'
     db.ref('calls/' + callId).set({
       from: currentUser.login,
-      to: 'GENERAL DIRECTOR', // Для примера звоним директору, в реальном чате надо выбирать
+      to: targetUser, 
       status: 'offering',
       activeRef: activeCallId
     });
@@ -483,10 +482,8 @@ async function startCall() {
       caller: currentUser.login
     });
     
-    // Слушаем ответ
     db.ref('calls/' + callId + '/status').on('value', snap => {
       if (snap.val() === 'answered') {
-        // Получаем Answer
         db.ref('calls/active/' + activeCallId).once('value').then(s => {
           const data = s.val();
           if (data && data.answerSdp) {
@@ -495,7 +492,6 @@ async function startCall() {
           }
         });
         
-        // Слушаем ICE кандидаты собеседника
         db.ref('calls/active/' + activeCallId + '/candidates').on('child_added', cSnap => {
           const candidate = JSON.parse(decrypt(cSnap.val()));
           peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
@@ -505,10 +501,8 @@ async function startCall() {
 
   } catch (err) {
     alert('❌ Ошибка доступа к микрофону: ' + err.message);
-    console.error(err);
   }
 }
-
 async function acceptCall(id, data) {
   callId = id;
   try {

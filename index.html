@@ -17,20 +17,29 @@
         </div>
       </div>
       
-      <div class="chat-list" id="chat-list">
-        <div class="chat-item active">
-          <div class="chat-avatar">📄</div>
-          <div class="chat-info">
-            <div class="chat-top">
-              <div class="chat-name">Общий чат</div>
-              <div class="chat-time" id="last-msg-time"></div>
-            </div>
-            <div class="chat-bottom">
-              <div class="chat-last-message" id="last-msg-text">Нажмите, чтобы отправить сообщение</div>
-            </div>
-          </div>
+     <div class="chat-list-header">
+    <h3>Чаты</h3>
+    <button class="new-chat-btn" onclick="showNewChatModal()">✏️ Новый чат</button>
+</div>
+<div class="chat-list" id="chat-list">
+    <!-- Сюда JS будет добавлять чаты -->
+</div>
+
+<!-- Модальное окно создания чата -->
+<div id="new-chat-modal" class="modal-overlay" style="display:none;">
+    <div class="modal-content paper-sheet">
+        <h3>Создать новый чат</h3>
+        <input type="text" id="new-chat-name" placeholder="Название чата (например: Проект X)">
+        <p style="font-size:12px; color:#666; margin:10px 0;">Выберите участников:</p>
+        <div id="user-select-list" style="max-height:150px; overflow-y:auto; border:1px dashed #ccc; padding:5px;">
+            <!-- Список пользователей -->
         </div>
-      </div>
+        <div class="modal-actions">
+            <button class="btn-secondary" onclick="closeNewChatModal()">Отмена</button>
+            <button class="btn-primary" onclick="createNewChat()">Создать</button>
+        </div>
+    </div>
+</div>
       
       <div class="sidebar-footer">
         <div class="user-info" id="sidebar-user-info"></div>

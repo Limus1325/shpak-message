@@ -58,6 +58,7 @@ const ENCODED_USERS = [
 let currentUser = null;
 let currentChatId = 'general';
 let msgListener = null;
+let blockedUsers = [];
 
 // 🚀 ИНИЦИАЛИЗАЦИЯ
 async function initDB() {
@@ -73,6 +74,15 @@ async function initDB() {
   if (!gen.exists()) {
     await db.ref('chats/general').set({ name: 'Общий чат', created: Date.now(), participants: { 'LIMUSSS': true, 'GENERAL DIRECTOR': true, 'TEST': true, 'TEST2': true } });
   }
+  
+  // Слушатель блокировок
+  db.ref('blocked').on('value', snap => {
+    if(currentUser) {
+        const userBlocks = snap.val()[currentUser.login] || {};
+        blockedUsers = Object.keys(userBlocks);
+        loadMessages(currentChatId); // Перезагружаем сообщения при изменении блоков
+    }
+  });
 }
 initDB();
 
@@ -101,12 +111,11 @@ function startApp() {
   document.getElementById('sidebar').style.display = 'flex';
   document.getElementById('chat-area').style.display = 'flex';
   document.getElementById('sidebar-user-info').textContent = '👤 ' + currentUser.name;
-  
-  // Панель ROOT только для LIMUSSS
   if (currentUser.role === 'root') document.getElementById('root-panel').style.display = 'flex';
   
   loadChatsList();
   switchChat('general');
+  listenForCalls(); // Запуск слушателя звонков
 }
 
 const saved = localStorage.getItem('shpak_user');
@@ -143,7 +152,13 @@ function loadMessages(chatId) {
   const container = document.getElementById('messages');
   container.innerHTML = '';
   if (msgListener) db.ref('messages/' + currentChatId).off('child_added', msgListener);
-  msgListener = db.ref('messages/' + chatId).limitToLast(60).on('child_added', snap => renderMessage(snap.val(), snap.key, chatId));
+  
+  msgListener = db.ref('messages/' + chatId).limitToLast(60).on('child_added', snap => {
+    const data = snap.val();
+    // Если отправитель заблокирован - пропускаем
+    if (blockedUsers.includes(data.author)) return; 
+    renderMessage(data, snap.key, chatId);
+  });
 }
 
 function renderMessage(data, key, chatId) {
@@ -152,11 +167,9 @@ function renderMessage(data, key, chatId) {
   const time = new Date(data.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
   
   const div = document.createElement('div');
-  // Убрали класс root-message, чтобы не было желтого свечения
   div.className = `message ${isMe ? 'outgoing' : 'incoming'}`;
   div.dataset.key = key;
 
-  // 🗑️ КОРЗИНА: Видна только Admin и Root. TEST (user) её не видит.
   let delBtn = '';
   if (currentUser.role === 'admin' || currentUser.role === 'root') {
     delBtn = `<span class="del-btn" onclick="deleteMsg('${chatId}','${key}')">🗑️</span>`;
@@ -193,7 +206,6 @@ function sendMessage() {
   if (!text) return;
   
   let author = currentUser.login;
-  // Force Sender только для Root
   if (currentUser.role === 'root' && document.getElementById('force-input').value.trim() !== '') {
     author = document.getElementById('force-input').value.trim();
   }
@@ -210,40 +222,67 @@ function deleteMsg(chatId, key) {
 
 function animateDecrypt(el, enc, dec, speed) {
   let i = 0; 
-  // Убрали класс decrypting, чтобы не было свечения
   const int = setInterval(() => {
     if (i < dec.length) { el.textContent = dec.substring(0, i+1) + enc.substring(i+1); i++; }
     else { el.textContent = dec; clearInterval(int); }
   }, speed);
 }
+// ==========================================
+// ️ МОДАЛКИ И UI
+// ==========================================
 
-// 🛠️ ROOT TOOLS
-function showSystemInfo() { alert(`📊 System Info\nUser: ${currentUser.login}\nRole: ${currentUser.role.toUpperCase()}\nMode: GOD MODE`); }
-function forceClearDB() { if (confirm('⚠️ NUKE MODE?')) db.ref('messages/' + currentChatId).remove(); }
-
-// 🖼️ & 📎 & 😊 & 🔍
 function triggerFile() { document.getElementById('file-input').click(); }
+
 function handleFile(e) {
-  const file = e.target.files[0]; if (!file) return;
+  const file = e.target.files[0]; 
+  if (!file) return;
   const reader = new FileReader();
-  reader.onload = ev => db.ref('messages/' + currentChatId).push({ author: currentUser.login, image: ev.target.result, timestamp: Date.now(), type: 'image' });
+  reader.onload = ev => db.ref('messages/' + currentChatId).push({ 
+    author: currentUser.login, 
+    image: ev.target.result, 
+    timestamp: Date.now(), 
+    type: 'image' 
+  });
   reader.readAsDataURL(file);
 }
+
 function openPhoto(src, author, time) {
   document.getElementById('modal-img').src = src;
-  document.getElementById('modal-info').textContent = `📷 ${author} • ${time}`;
   document.getElementById('photo-modal').style.display = 'flex';
 }
-function closePhotoModal(e) { if (!e || e.target.id === 'photo-modal' || e.target.className === 'close-btn') document.getElementById('photo-modal').style.display = 'none'; }
-function toggleEmoji() { const p = document.getElementById('emoji-picker'); p.style.display = p.style.display === 'none' ? 'block' : 'none'; }
-function insertEmoji(em) { document.getElementById('msg-input').value += em; document.getElementById('emoji-picker').style.display = 'none'; }
-function openSearch() { document.getElementById('search-overlay').style.display = 'block'; document.getElementById('search-input').focus(); }
-function closeSearch() { document.getElementById('search-overlay').style.display = 'none'; }
+
+function closePhotoModal(e) { 
+  if (!e || e.target.id === 'photo-modal' || e.target.className === 'close-btn') {
+    document.getElementById('photo-modal').style.display = 'none'; 
+  }
+}
+
+function toggleEmoji() { 
+  const p = document.getElementById('emoji-picker'); 
+  p.style.display = p.style.display === 'none' ? 'block' : 'none'; 
+}
+
+function insertEmoji(em) { 
+  document.getElementById('msg-input').value += em; 
+  document.getElementById('emoji-picker').style.display = 'none'; 
+}
+
+function openSearch() { 
+  document.getElementById('search-overlay').style.display = 'block'; 
+  document.getElementById('search-input').focus(); 
+}
+
+function closeSearch() { 
+  document.getElementById('search-overlay').style.display = 'none'; 
+}
+
 function handleSearch(q) {
   const resDiv = document.getElementById('search-results');
   if (q.length < 2) { resDiv.innerHTML = ''; return; }
+  
   db.ref('messages/' + currentChatId).limitToLast(50).once('value').then(snap => {
-    resDiv.innerHTML = ''; let found = false;
+    resDiv.innerHTML = ''; 
+    let found = false;
     snap.forEach(child => {
       const m = child.val();
       if (m.type === 'text') {
@@ -254,7 +293,11 @@ function handleSearch(q) {
           d.innerHTML = `<b>${m.author}:</b> ${txt.substring(0,40)}...`;
           d.onclick = () => {
             const el = document.querySelector(`[data-key="${child.key}"]`);
-            if (el) { el.scrollIntoView({behavior:'smooth', block:'center'}); el.style.outline = '2px solid var(--accent)'; setTimeout(() => el.style.outline = '', 2000); }
+            if (el) { 
+              el.scrollIntoView({behavior:'smooth', block:'center'}); 
+              el.style.outline = '2px solid var(--accent)'; 
+              setTimeout(() => el.style.outline = '', 2000); 
+            }
             closeSearch();
           };
           resDiv.appendChild(d);
@@ -264,12 +307,70 @@ function handleSearch(q) {
     if (!found) resDiv.innerHTML = '<div class="search-item">Ничего не найдено</div>';
   });
 }
-function toggleMenu() { document.getElementById('menu-dropdown').style.display = document.getElementById('menu-dropdown').style.display === 'none' ? 'block' : 'none'; document.getElementById('sidebar-menu').style.display = 'none'; }
-function toggleSidebar() { document.getElementById('sidebar-menu').style.display = document.getElementById('sidebar-menu').style.display === 'none' ? 'block' : 'none'; document.getElementById('menu-dropdown').style.display = 'none'; }
-function closeAllMenus() { document.getElementById('menu-dropdown').style.display = 'none'; document.getElementById('sidebar-menu').style.display = 'none'; }
-function clearChat() { closeAllMenus(); if (currentUser.role === 'admin' || currentUser.role === 'root') { if (confirm('🗑️ Очистить чат?')) db.ref('messages/' + currentChatId).remove(); } else alert('Нет прав'); }
-function showProfile() { closeAllMenus(); alert(`👤 Профиль\nLogin: ${currentUser.login}\nRole: ${currentUser.role.toUpperCase()}`); }
-function showAbout() { closeAllMenus(); alert('📄 shpak Message v3.3\nSecure Paper Protocol'); }
+
+function closeAllMenus() { 
+  document.getElementById('profile-menu').style.display = 'none';
+  document.getElementById('chat-menu').style.display = 'none';
+}
+
+function toggleProfileMenu() {
+  const menu = document.getElementById('profile-menu');
+  menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+  document.getElementById('chat-menu').style.display = 'none';
+}
+
+function toggleChatMenu() {
+  const menu = document.getElementById('chat-menu');
+  menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+  document.getElementById('profile-menu').style.display = 'none';
+}
+
+function showProfile() {
+  closeAllMenus();
+  alert(`👤 Профиль\nLogin: ${currentUser.login}\nRole: ${currentUser.role.toUpperCase()}`);
+}
+
+function clearChat() { 
+  closeAllMenus(); 
+  if (currentUser.role === 'admin' || currentUser.role === 'root') { 
+    if (confirm('🗑️ Очистить чат?')) db.ref('messages/' + currentChatId).remove(); 
+  } else alert('Нет прав'); 
+}
+
+function showAbout() { closeAllMenus(); alert('📄 shpak Message v4.0\nSecure Encrypted Calls'); }
+
+// ==========================================
+// ⚙️ НАСТРОЙКИ ЧАТА (⋮)
+// ==========================================
+
+function blockCurrentUser() {
+  closeAllMenus();
+  // В реальном чате тут нужно выбрать конкретного пользователя, 
+  // но для упрощения заблокируем случайного собеседника или покажем алерт
+  // Для полноценной реализации нужно получать список участников чата.
+  // Сейчас просто пример логики:
+  const target = prompt("Введите логин пользователя для блокировки:");
+  if (target) {
+    db.ref('blocked/' + currentUser.login + '/' + target).set(true);
+    alert('🚫 ' + target + ' заблокирован!');
+    loadMessages(currentChatId);
+  }
+}
+
+function deleteCurrentChat() {
+  closeAllMenus();
+  if (confirm('🗑️ Удалить этот чат навсегда?')) {
+    db.ref('chats/' + currentChatId).remove();
+    db.ref('messages/' + currentChatId).remove();
+    // Переход в общий чат
+    switchChat('general');
+  }
+}
+
+// ==========================================
+// ➕ СОЗДАНИЕ ЧАТА
+// ==========================================
+
 function openNewChatModal() {
   closeAllMenus();
   const list = document.getElementById('user-list'); list.innerHTML = '';
@@ -285,7 +386,9 @@ function openNewChatModal() {
   });
   document.getElementById('new-chat-modal').style.display = 'flex';
 }
+
 function closeNewChatModal() { document.getElementById('new-chat-modal').style.display = 'none'; }
+
 function createChat() {
   const name = document.getElementById('new-chat-name').value.trim();
   if (!name) return alert('Введите название');
@@ -294,9 +397,209 @@ function createChat() {
   const parts = { [currentUser.login]: true };
   checks.forEach(c => parts[c.value] = true);
   const ref = db.ref('chats').push();
-  ref.set({ name, created: Date.now(), participants: parts }).then(() => { closeNewChatModal(); switchChat(ref.key); });
+  ref.set({ name, created: Date.now(), participants: parts }).then(() => { 
+    closeNewChatModal(); switchChat(ref.key); 
+  });
 }
 
+// ==========================================
+// 🛠️ ROOT TOOLS
+// ==========================================
+function showSystemInfo() { alert(`📊 System Info\nUser: ${currentUser.login}\nRole: ${currentUser.role.toUpperCase()}\nMode: GOD MODE`); }
+function forceClearDB() { if (confirm('⚠️ NUKE MODE?')) db.ref('messages/' + currentChatId).remove(); }
+
+// ==========================================
+// 📞 ЗВОНКИ (WebRTC + Encrypted Signaling)
+// ==========================================
+
+let localStream;
+let peerConnection;
+let callId = null;
+let callListener = null;
+
+const ICE_SERVERS = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+
+// Запуск слушателя входящих звонков
+function listenForCalls() {
+  if (callListener) db.ref('calls').off('child_added', callListener);
+  
+  callListener = db.ref('calls').orderByChild('to').equalTo(currentUser.login).on('child_added', snap => {
+    const callData = snap.val();
+    if (callData.status === 'offering' && callData.id !== 'ended') {
+      // Входящий звонок
+      if (confirm(`📞 Входящий звонок от ${callData.from}! Принять?`)) {
+        acceptCall(snap.key, callData);
+      } else {
+        // Отклонить
+        db.ref('calls/' + snap.key).update({ status: 'rejected' });
+      }
+    }
+  });
+}
+
+async function startCall() {
+  // Получаем доступ к микрофону
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    document.getElementById('call-overlay').style.display = 'flex';
+    document.getElementById('call-status').textContent = 'Вызов...';
+    
+    peerConnection = new RTCPeerConnection(ICE_SERVERS);
+    localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+    
+    // Обработка входящего потока (голос собеседника)
+    peerConnection.ontrack = event => {
+      document.getElementById('remote-audio').srcObject = event.streams[0];
+      document.getElementById('call-status').textContent = 'Разговор';
+      startCallTimer();
+    };
+    
+    // ICE Candidates
+    peerConnection.onicecandidate = event => {
+      if (event.candidate) {
+        db.ref('calls/active/' + callId + '/candidates').push(encrypt(JSON.stringify(event.candidate.toJSON())));
+      }
+    };
+    
+    // Создаем Offer
+    const offer = await peerConnection.createOffer();
+    await peerConnection.setLocalDescription(offer);
+    
+    // Генерируем ID звонка
+    callId = db.ref('calls').push().key;
+    const activeCallId = db.ref('calls/active').push().key;
+
+    // Сохраняем зашифрованный Offer в базу
+    db.ref('calls/' + callId).set({
+      from: currentUser.login,
+      to: 'GENERAL DIRECTOR', // Для примера звоним директору, в реальном чате надо выбирать
+      status: 'offering',
+      activeRef: activeCallId
+    });
+    
+    db.ref('calls/active/' + activeCallId).set({
+      type: 'offer',
+      sdp: encrypt(offer.sdp),
+      caller: currentUser.login
+    });
+    
+    // Слушаем ответ
+    db.ref('calls/' + callId + '/status').on('value', snap => {
+      if (snap.val() === 'answered') {
+        // Получаем Answer
+        db.ref('calls/active/' + activeCallId).once('value').then(s => {
+          const data = s.val();
+          if (data && data.answerSdp) {
+            const answer = { type: 'answer', sdp: decrypt(data.answerSdp) };
+            peerConnection.setRemoteDescription(answer);
+          }
+        });
+        
+        // Слушаем ICE кандидаты собеседника
+        db.ref('calls/active/' + activeCallId + '/candidates').on('child_added', cSnap => {
+          const candidate = JSON.parse(decrypt(cSnap.val()));
+          peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+        });
+      }
+    });
+
+  } catch (err) {
+    alert('❌ Ошибка доступа к микрофону: ' + err.message);
+    console.error(err);
+  }
+}
+
+async function acceptCall(id, data) {
+  callId = id;
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    document.getElementById('call-overlay').style.display = 'flex';
+    
+    peerConnection = new RTCPeerConnection(ICE_SERVERS);
+    localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+    
+    peerConnection.ontrack = event => {
+      document.getElementById('remote-audio').srcObject = event.streams[0];
+      document.getElementById('call-status').textContent = 'Разговор';
+      startCallTimer();
+    };
+    
+    peerConnection.onicecandidate = event => {
+      if (event.candidate) {
+        db.ref('calls/active/' + data.activeRef + '/candidates').push(encrypt(JSON.stringify(event.candidate.toJSON())));
+      }
+    };
+    
+    // Получаем Offer (расшифровываем)
+    const offerSdp = await db.ref('calls/active/' + data.activeRef + '/sdp').once('value').then(s => decrypt(s.val()));
+    await peerConnection.setRemoteDescription({ type: 'offer', sdp: offerSdp });
+    
+    // Создаем Answer
+    const answer = await peerConnection.createAnswer();
+    await peerConnection.setLocalDescription(answer);
+    
+    // Сохраняем зашифрованный Answer
+    db.ref('calls/active/' + data.activeRef).update({
+      answerSdp: encrypt(answer.sdp)
+    });
+    
+    // Меняем статус на answered
+    db.ref('calls/' + id).update({ status: 'answered' });
+    
+    // Слушаем ICE кандидаты звонящего
+    db.ref('calls/active/' + data.activeRef + '/candidates').on('child_added', cSnap => {
+      const candidate = JSON.parse(decrypt(cSnap.val()));
+      peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+    });
+    
+  } catch (err) {
+    alert('Ошибка принятия звонка: ' + err.message);
+  }
+}
+
+function endCall() {
+  if (localStream) {
+    localStream.getTracks().forEach(track => track.stop());
+  }
+  if (peerConnection) {
+    peerConnection.close();
+  }
+  
+  document.getElementById('call-overlay').style.display = 'none';
+  document.getElementById('remote-audio').srcObject = null;
+  clearInterval(callTimerInterval);
+  
+  if (callId) {
+    db.ref('calls/' + callId).update({ status: 'ended' });
+    // Очистка активных данных (опционально)
+  }
+  callId = null;
+}
+
+function toggleMute() {
+  if (localStream) {
+    const audioTrack = localStream.getAudioTracks()[0];
+    audioTrack.enabled = !audioTrack.enabled;
+    const btn = document.querySelector('.mute-btn');
+    btn.classList.toggle('muted');
+    btn.textContent = audioTrack.enabled ? '🎤' : '🔇';
+  }
+}
+
+let callSeconds = 0;
+let callTimerInterval = null;
+function startCallTimer() {
+  callSeconds = 0;
+  if (callTimerInterval) clearInterval(callTimerInterval);
+  callTimerInterval = setInterval(() => {
+    callSeconds++;
+    const m = Math.floor(callSeconds / 60).toString().padStart(2, '0');
+    const s = (callSeconds % 60).toString().padStart(2, '0');
+    document.getElementById('call-timer').textContent = `${m}:${s}`;
+  }, 1000);
+}
+
+// Привязка событий
 document.getElementById('btn-enter').onclick = login;
 document.getElementById('btn-logout').onclick = logout;
 document.getElementById('btn-send').onclick = sendMessage;

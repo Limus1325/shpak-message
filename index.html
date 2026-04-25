@@ -11,7 +11,8 @@
     <!-- Сайдбар -->
     <div class="sidebar" id="sidebar" style="display:none;">
       <div class="sidebar-header">
-        <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+        <!-- ТРИ ПОЛОСКИ -> ПРОФИЛЬ -->
+        <button class="menu-btn" onclick="openProfileMenu()">☰</button>
         <div class="search-box">
           <input type="text" placeholder="Поиск..." onclick="openSearch()">
         </div>
@@ -29,13 +30,13 @@
 
     <!-- Область чата -->
     <div class="chat-area" id="chat-area" style="display:none;">
-      <!-- GOD MODE PANEL (Только для ROOT) -->
-      <div id="root-panel" style="display:none; background:#1a0505; color:#ff3333; padding:6px; font-family:monospace; font-size:12px; justify-content:space-between; align-items:center; border-bottom:1px solid #ff0000;">
+      <!-- GOD MODE PANEL -->
+      <div id="root-panel" style="display:none;">
         <span>⚠️ GOD MODE: LIMUSSS</span>
         <div>
-          <input type="text" id="force-input" placeholder="Force Sender" style="width:90px; background:#330000; color:#ffaaaa; border:1px solid #ff0000; font-family:monospace;">
-          <button onclick="showSystemInfo()" style="background:#ff0000; color:white; border:none; padding:2px 6px; cursor:pointer; font-weight:bold;">SYS</button>
-          <button onclick="forceClearDB()" style="background:#ff0000; color:white; border:none; padding:2px 6px; cursor:pointer; font-weight:bold;">NUKE</button>
+          <input type="text" id="force-input" placeholder="Force Sender">
+          <button onclick="showSystemInfo()">SYS</button>
+          <button onclick="forceClearDB()">NUKE</button>
         </div>
       </div>
 
@@ -48,8 +49,10 @@
           </div>
         </div>
         <div class="chat-header-actions">
+          <button class="header-btn" onclick="startCall()" title="Позвонить">📞</button>
           <button class="header-btn" onclick="openSearch()">🔍</button>
-          <button class="header-btn" onclick="toggleMenu()">⋮</button>
+          <!-- ТРИ ТОЧКИ -> НАСТРОЙКИ ЧАТА -->
+          <button class="header-btn" onclick="openChatSettings()">⋮</button>
         </div>
       </div>
       
@@ -78,35 +81,55 @@
     </div>
   </div>
 
-  <!-- Выпадающее меню -->
-  <div id="menu-dropdown" class="menu-dropdown" style="display:none;">
-    <div class="menu-item" onclick="showProfile()">👤 Профиль</div>
-    <div class="menu-item" onclick="clearChat()">🗑️ Очистить чат</div>
-    <div class="menu-item" onclick="showAbout()">ℹ️ О системе</div>
+  <!-- Меню профиля (Три полоски) -->
+  <div id="profile-menu" class="dropdown-menu" style="display:none;">
+    <div class="menu-item" onclick="showProfile()">👤 Мой профиль</div>
+    <div class="menu-item" onclick="logout()">🚪 Выйти из системы</div>
   </div>
 
-  <!-- Боковое меню -->
-  <div id="sidebar-menu" class="sidebar-menu" style="display:none;">
-    <div class="sidebar-menu-header">
-      <h3>📄 Меню</h3>
-      <button onclick="toggleSidebar()">✕</button>
-    </div>
-    <div class="sidebar-menu-items">
-      <div class="menu-item" onclick="showProfile()">👤 Профиль</div>
-      <div class="menu-item" onclick="openNewChatModal()">➕ Создать чат</div>
+  <!-- Настройки чата (Три точки) -->
+  <div id="chat-settings-menu" class="dropdown-menu" style="display:none;">
+    <div class="menu-item" onclick="blockCurrentUser()">🚫 Заблокировать собеседника</div>
+    <div class="menu-item" onclick="deleteCurrentChat()" style="color:red;">🗑️ Удалить этот чат</div>
+  </div>
+
+  <!-- Интерфейс звонка -->
+  <div id="call-overlay" class="call-overlay" style="display:none;">
+    <div class="call-box">
+      <div class="call-avatar">📞</div>
+      <h2 id="call-status">Вызов...</h2>
+      <p id="call-timer">00:00</p>
+      <div class="call-controls">
+        <button class="call-btn mute-btn" onclick="toggleMute()">🎤</button>
+        <button class="call-btn end-btn" onclick="endCall()">📵</button>
+      </div>
+      <audio id="remote-audio" autoplay></audio>
     </div>
   </div>
 
-  <!-- Фото модалка -->
+  <!-- Остальные модалки (Поиск, Эмодзи, Фото, Новый чат) -->
   <div id="photo-modal" class="photo-modal" style="display:none;" onclick="closePhotoModal(event)">
     <div class="photo-modal-content" onclick="event.stopPropagation()">
       <button class="close-btn" onclick="closePhotoModal()">✕</button>
       <img id="modal-img" src="" alt="Photo">
-      <div class="photo-modal-info" id="modal-info"></div>
     </div>
   </div>
 
-  <!-- Создание чата -->
+  <div id="search-overlay" class="search-overlay" style="display:none;">
+    <div class="search-box-container">
+      <input type="text" id="search-input" placeholder="Поиск..." oninput="handleSearch(this.value)">
+      <button onclick="closeSearch()">✕</button>
+    </div>
+    <div id="search-results" class="search-results"></div>
+  </div>
+
+  <div id="emoji-picker" class="emoji-picker" style="display:none;">
+    <div class="emoji-grid">
+      <span onclick="insertEmoji('😀')">😀</span><span onclick="insertEmoji('😂')">😂</span>
+      <span onclick="insertEmoji('😍')">😍</span><span onclick="insertEmoji('🔥')">🔥</span>
+    </div>
+  </div>
+
   <div id="new-chat-modal" class="modal-overlay" style="display:none;">
     <div class="modal-content paper-sheet">
       <h3>Новый чат</h3>
@@ -116,25 +139,6 @@
         <button class="btn-secondary" onclick="closeNewChatModal()">Отмена</button>
         <button class="btn-primary" onclick="createChat()">Создать</button>
       </div>
-    </div>
-  </div>
-
-  <!-- Поиск -->
-  <div id="search-overlay" class="search-overlay" style="display:none;">
-    <div class="search-box-container">
-      <input type="text" id="search-input" placeholder="Поиск..." oninput="handleSearch(this.value)">
-      <button onclick="closeSearch()">✕</button>
-    </div>
-    <div id="search-results" class="search-results"></div>
-  </div>
-
-  <!-- Эмодзи -->
-  <div id="emoji-picker" class="emoji-picker" style="display:none;">
-    <div class="emoji-grid">
-      <span onclick="insertEmoji('😀')">😀</span><span onclick="insertEmoji('😂')">😂</span>
-      <span onclick="insertEmoji('😍')">😍</span><span onclick="insertEmoji('🔥')">🔥</span>
-      <span onclick="insertEmoji('👍')"></span><span onclick="insertEmoji('👎')"></span>
-      <span onclick="insertEmoji('🤫')"></span><span onclick="insertEmoji('✈️')">✈️</span>
     </div>
   </div>
 

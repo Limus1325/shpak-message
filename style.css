@@ -130,3 +130,37 @@ body {
   .sidebar { width: 100%; height: 30%; }
   .chat-area { height: 70%; }
 }
+/* Уведомление о звонке */
+.call-toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: var(--paper-bg);
+  border: 2px solid var(--accent);
+  box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+  z-index: 6000;
+  border-radius: 8px;
+  animation: slideInRight 0.3s ease-out;
+}
+@keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
+
+.toast-content {
+  display: flex;
+  align-items: center;
+  padding: 15px;
+  gap: 15px;
+}
+.toast-avatar { font-size: 30px; animation: pulse 1s infinite; }
+.toast-info h3 { margin: 0; font-size: 16px; color: var(--ink); }
+.toast-info p { margin: 5px 0 0; font-size: 14px; color: #666; }
+.toast-actions { display: flex; gap: 5px; margin-left: auto; }
+.toast-btn {
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 12px;
+}
+.toast-btn.accept { background: #4CAF50; color: white; }
+.toast-btn.reject { background: #ff4444; color: white; }

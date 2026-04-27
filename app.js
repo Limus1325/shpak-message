@@ -404,18 +404,34 @@ function sendMessage() {
   const finalText = lines.join('\n');
   
   let author = currentUser.login;
-  // Force sender только для админов/рута
   const forceInput = document.getElementById('force-input');
   if ((currentUser.role === 'root' || currentUser.role === 'admin') && forceInput?.value.trim()) {
      author = forceInput.value.trim();
   }
 
-  db.ref('messages/' + currentChatId).push({
-    author, text: encrypt(finalText), timestamp: Date.now(), type: 'text', role: currentUser.role
-  }).then(() => { 
+  // Формируем объект сообщения
+  const messageData = {
+    author, 
+    text: encrypt(finalText), 
+    timestamp: Date.now(), 
+    type: 'text', 
+    role: currentUser.role
+  };
+  
+  // Если есть ответ — добавляем ссылку
+  if (replyTo) {
+    messageData.replyTo = {
+      key: replyTo.key,
+      author: replyTo.author,
+      text: replyTo.text
+    };
+  }
+
+  db.ref('messages/' + currentChatId).push(messageData).then(() => { 
       input.value = ''; 
       input.focus(); 
-      if(charCounter) charCounter.textContent = '0/200'; 
+      if(charCounter) charCounter.textContent = '0/200';
+      cancelReply(); // Сбрасываем ответ после отправки
   });
 }
 

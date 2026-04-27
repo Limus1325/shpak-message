@@ -42,9 +42,11 @@
           <button class="header-btn" onclick="toggleChatMenu()">⋮</button>
         </div>
       </div>
+      
       <div class="messages-container" id="messages"></div>
-            <!-- Блок ответа (скрыт по умолчанию) -->
-      <div id="reply-preview" style="display:none; padding:8px 12px; background:#f0f0f0; border-left:3px solid var(--accent); margin-bottom:5px; font-size:13px;">
+      
+      <!-- Блок ответа (скрыт по умолчанию) -->
+      <div id="reply-preview" style="display:none; padding:8px 12px; background:#f0f0f0; border-left:3px solid var(--accent); margin:5px 10px; font-size:13px;">
         <div style="display:flex; justify-content:space-between; align-items:center;">
           <span id="reply-to-author" style="font-weight:bold; color:var(--accent);"></span>
           <button id="cancel-reply" style="background:none; border:none; color:#888; cursor:pointer; font-size:16px;">✕</button>
@@ -52,7 +54,6 @@
         <div id="reply-to-text" style="color:#666; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:300px;"></div>
       </div>
 
-      <div class="message-input-area">
       <div class="message-input-area">
         <button class="attach-btn" onclick="triggerFile()">📎</button>
         <input id="msg-input" placeholder="Написать сообщение..." type="text" maxlength="200">
@@ -65,11 +66,10 @@
     </div>
 
     <!-- Экран входа -->
-    <!-- Экран входа с глитчем -->
     <div id="auth-screen" class="auth-screen">
-          <!-- CANVAS ДЛЯ ЭФФЕКТА МАТРИЦЫ -->
-    <canvas id="matrix-canvas" style="position:fixed; inset:0; z-index:9999; pointer-events:none; display:none;">
-    </canvas>
+      <!-- CANVAS ДЛЯ ЭФФЕКТА МАТРИЦЫ -->
+      <canvas id="matrix-canvas" style="position:fixed; inset:0; z-index:9999; pointer-events:none; display:none;"></canvas>
+      
       <div class="auth-box paper-sheet" id="auth-box">
         <!-- Скрытые статы для глитча -->
         <div id="glitch-stats" style="position:absolute; top:-20px; left:0; width:100%; text-align:center; font-family:monospace; color:red; font-size:12px; opacity:0;">
@@ -87,25 +87,14 @@
       </div>
     </div>
 
-    <!-- ТЕРМИНАЛ ROOT -->
-      <!-- ЭКРАН ЗАГРУЗКИ (BOOT SEQUENCE) -->
-  <div id="boot-screen" style="display:none;">
-    <div class="boot-container">
-      <div id="boot-log"></div>
-    </div>
-  </div>
-
-  <!-- ТЕРМИНАЛ (Оставь как был) -->
-  <div id="terminal-overlay" style="display:none;">
-    <div id="terminal-bg"></div>
-    <div id="terminal">
-      <div id="terminal-output"></div>
-      <div class="terminal-input-line">
-        <span id="terminal-prompt">root@killer:/home/Limus# </span>
-        <input type="text" id="terminal-input" autocomplete="off" spellcheck="false">
+    <!-- ЭКРАН ЗАГРУЗКИ (BOOT SEQUENCE) -->
+    <div id="boot-screen" style="display:none;">
+      <div class="boot-container">
+        <div id="boot-log"></div>
       </div>
     </div>
-  </div>
+
+    <!-- ТЕРМИНАЛ ROOT -->
     <div id="terminal-overlay" style="display:none;">
       <div id="terminal-bg"></div>
       <div id="terminal">
@@ -123,6 +112,7 @@
     <div class="menu-item" onclick="showProfile()">👤 Мой профиль</div>
     <div class="menu-item" onclick="logout()">🚪 Выйти</div>
   </div>
+  
   <!-- Меню чата -->
   <div id="chat-menu" class="dropdown-menu" style="display:none;">
     <div class="menu-item" onclick="blockCurrentUser()">🚫 Заблокировать</div>
@@ -162,6 +152,7 @@
       <img id="modal-img" src="" alt="Photo">
     </div>
   </div>
+  
   <div id="search-overlay" class="search-overlay" style="display:none;">
     <div class="search-box-container">
       <input type="text" id="search-input" placeholder="Поиск..." oninput="handleSearch(this.value)">
@@ -169,14 +160,16 @@
     </div>
     <div id="search-results" class="search-results"></div>
   </div>
+  
   <div id="emoji-picker" class="emoji-picker" style="display:none;">
     <div class="emoji-grid">
       <span onclick="insertEmoji('😀')">😀</span><span onclick="insertEmoji('😂')">😂</span>
-      <span onclick="insertEmoji('😍')">😍</span><span onclick="insertEmoji('🔥')">🔥</span>
+      <span onclick="insertEmoji('😍')">😍</span><span onclick="insertEmoji('🔥')"></span>
       <span onclick="insertEmoji('✈️')">✈️</span><span onclick="insertEmoji('👑')">👑</span>
       <span onclick="insertEmoji('👻')">👻</span><span onclick="insertEmoji('😼')">😼</span>
     </div>
   </div>
+  
   <div id="new-chat-modal" class="modal-overlay" style="display:none;">
     <div class="modal-content paper-sheet">
       <h3>Новый чат</h3>
@@ -188,6 +181,7 @@
       </div>
     </div>
   </div>
+  
   <input type="file" id="file-input" accept="image/*" style="display:none;" onchange="handleFile(event)">
   
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>

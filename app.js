@@ -10,6 +10,9 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
+// ==========================================
+// 🔐 ШИФР И УТИЛИТЫ
+// ==========================================
 function encrypt(text) {
   if (!text) return "";
   let res = "";
@@ -26,6 +29,7 @@ function encrypt(text) {
   }
   return res;
 }
+
 function decrypt(text) {
   if (!text) return "";
   let res = "";
@@ -43,7 +47,9 @@ function decrypt(text) {
   return res;
 }
 
-// 🔒 ВАЖНО: ВАНЯ ТЕПЕРЬ ADMIN, ТЕРМИНАЛ ТОЛЬКО У LIMUSSS
+// ==========================================
+// 👥 ПОЛЬЗОВАТЕЛИ
+// ==========================================
 const ENCODED_USERS = [
   { l: 'TE1VU1NT', p: 'MjlJN28yMjBP', r: 'root', n: 'Kirill (Creator)' },
   { l: 'R0VORVJBTCBESVJFQ1RPUg==', p: 'YzVndjFhMm4zaTRhNQ==', r: 'admin', n: 'Vanya (Director)' },
@@ -55,9 +61,16 @@ let currentUser = null;
 let currentChatId = 'general';
 let msgListener = null;
 let blockedUsers = [];
-let localStream, peerConnection, callId = null, callListener = null, callTimerInterval = null, callSeconds = 0;
-const ICE_SERVERS = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
+// 🚪 ФУНКЦИЯ ВЫХОДА (ГЛОБАЛЬНАЯ)
+function logout() {
+  localStorage.removeItem('shpak_user');
+  location.reload();
+}
+
+// ==========================================
+// 🚀 ИНИЦИАЛИЗАЦИЯ
+// ==========================================
 async function initDB() {
   for (const u of ENCODED_USERS) {
     const login = atob(u.l), pass = atob(u.p);
@@ -66,6 +79,7 @@ async function initDB() {
   }
   const gen = await db.ref('chats/general').once('value');
   if (!gen.exists()) await db.ref('chats/general').set({ name: 'Общий чат', created: Date.now(), participants: { 'LIMUSSS': true, 'GENERAL DIRECTOR': true, 'TEST': true, 'TEST2': true } });
+  
   db.ref('blocked').on('value', snap => {
     if(currentUser) {
       blockedUsers = Object.keys(snap.val()[currentUser.login] || {});
@@ -75,54 +89,84 @@ async function initDB() {
 }
 initDB();
 
+// 🔐 ВХОД
 function login() {
   const l = document.getElementById('login').value.trim();
   const p = document.getElementById('pass').value.trim();
   if (!l || !p) return alert('Введите данные');
+  
   db.ref('users/' + l).once('value').then(snap => {
     if (!snap.exists()) return alert('❌ Пользователь не найден');
     if (snap.val().password === encrypt(p)) {
       currentUser = { login: l, role: snap.val().role, name: snap.val().displayName || l };
       localStorage.setItem('shpak_user', JSON.stringify(currentUser));
       
-      // 🖥️ ТЕРМИНАЛ И АНИМАЦИЯ СТРОГО ТОЛЬКО ДЛЯ LIMUSSS
+      // Сначала запускаем приложение (чтобы появился сайдбар с кнопкой выхода)
+      startApp(); 
+      
+      // Если это ЛИМУССС - запускаем анимацию терминала
       if (currentUser.login === 'LIMUSSS') {
          triggerRootAnimation();
-      } else {
-         startApp();
       }
-    } else alert('❌ Неверный пароль');
+    } else {
+      alert('❌ Неверный пароль');
+    }
   });
 }
 
 function triggerRootAnimation() {
   const box = document.getElementById('auth-box');
   const screen = document.getElementById('auth-screen');
-  box.classList.add('tearing');
-  screen.style.background = '#000';
-  setTimeout(() => {
-    screen.style.display = 'none';
-    initTerminal();
-  }, 1500);
+  if(box && screen) {
+    box.classList.add('tearing');
+    screen.style.background = '#000';
+    setTimeout(() => {
+      screen.style.display = 'none';
+      initTerminal();
+    }, 1500);
+  }
 }
 
 function startApp() {
-  document.getElementById('auth-screen').style.display = 'none';
-  document.getElementById('sidebar').style.display = 'flex';
-  document.getElementById('chat-area').style.display = 'flex';
-  document.getElementById('sidebar-user-info').textContent = '👤 ' + currentUser.name;
-  if (currentUser.role === 'root' || currentUser.role === 'admin') document.getElementById('root-panel').style.display = 'flex';
+  const authScreen = document.getElementById('auth-screen');
+  const sidebar = document.getElementById('sidebar');
+  const chatArea = document.getElementById('chat-area');
+  const userInfo = document.getElementById('sidebar-user-info');
+  const rootPanel = document.getElementById('root-panel');
+
+  if(authScreen) authScreen.style.display = 'none';
+  if(sidebar) sidebar.style.display = 'flex';
+  if(chatArea) chatArea.style.display = 'flex';
+  if(userInfo) userInfo.textContent = '👤 ' + currentUser.name;
+  
+  // Панель инструментов видна и админу, и руту
+  if (rootPanel && (currentUser.role === 'root' || currentUser.role === 'admin')) {
+     rootPanel.style.display = 'flex';
+  }
+  
   loadChatsList();
   switchChat('general');
   listenForCalls();
 }
 
+// Авто-вход при перезагрузке
 const saved = localStorage.getItem('shpak_user');
-if (saved) { try { currentUser = JSON.parse(saved); startApp(); } catch(e) { localStorage.removeItem('shpak_user'); } }
+if (saved) { 
+  try { 
+    currentUser = JSON.parse(saved); 
+    startApp(); 
+    if (currentUser.login === 'LIMUSSS') triggerRootAnimation();
+  } catch(e) { 
+    localStorage.removeItem('shpak_user'); 
+  } 
+}
 
-// ЧАТЫ
+// ==========================================
+// 💬 ЧАТЫ И СООБЩЕНИЯ
+// ==========================================
 function loadChatsList() {
   const list = document.getElementById('chat-list');
+  if(!list) return;
   db.ref('chats').on('value', snap => {
     list.innerHTML = '';
     snap.forEach(child => {
@@ -140,19 +184,34 @@ function loadChatsList() {
 
 function switchChat(chatId) {
   currentChatId = chatId;
-  document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('active'));
-  document.querySelectorAll('.chat-item').forEach(item => { if(item.onclick.toString().includes(chatId)) item.classList.add('active'); });
-  db.ref('chats/' + chatId).once('value').then(s => document.getElementById('chat-header-name').textContent = s.val().name);
+  const items = document.querySelectorAll('.chat-item');
+  items.forEach(el => el.classList.remove('active'));
+  items.forEach(item => { if(item.onclick.toString().includes(chatId)) item.classList.add('active'); });
+  
+  const headerName = document.getElementById('chat-header-name');
+  if(headerName) {
+     db.ref('chats/' + chatId).once('value').then(s => headerName.textContent = s.val().name);
+  }
   loadMessages(chatId);
-  if (window.innerWidth <= 768) document.getElementById('app-container').classList.add('show-chat');
+  
+  // Мобильная навигация
+  if (window.innerWidth <= 768) {
+    const appContainer = document.getElementById('app-container');
+    if(appContainer) appContainer.classList.add('show-chat');
+  }
 }
-function showChatList() { document.getElementById('app-container').classList.remove('show-chat'); }
 
-// СООБЩЕНИЯ
+function showChatList() { 
+  const appContainer = document.getElementById('app-container');
+  if(appContainer) appContainer.classList.remove('show-chat'); 
+}
+
 function loadMessages(chatId) {
   const container = document.getElementById('messages');
+  if(!container) return;
   container.innerHTML = '';
   if (msgListener) db.ref('messages/' + currentChatId).off('child_added', msgListener);
+  
   msgListener = db.ref('messages/' + chatId).limitToLast(60).on('child_added', snap => {
     const data = snap.val();
     if (blockedUsers.includes(data.author)) return;
@@ -164,26 +223,44 @@ function renderMessage(data, key, chatId) {
   const container = document.getElementById('messages');
   const isMe = data.author === currentUser.login;
   const time = new Date(data.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  
   const div = document.createElement('div');
   div.className = `message ${isMe ? 'outgoing' : 'incoming'}`;
   div.dataset.key = key;
-  // Корзина видна Admin и Root
-  let delBtn = (currentUser.role === 'admin' || currentUser.role === 'root') ? `<span class="del-btn" onclick="deleteMsg('${chatId}','${key}')">🗑️</span>` : '';
-  let content = data.type === 'image' ? `<img src="${data.image}" class="photo-preview" onclick="openPhoto('${data.image}','${data.author}','${time}')">` : '<div class="msg-text"></div>';
-  div.innerHTML = `${!isMe ? `<div class="msg-author">${data.author} ${delBtn}</div>` : `<div class="msg-head-right" style="text-align:right">${delBtn}</div>`}${content}<div class="msg-meta"><span>${time}</span></div>`;
+  
+  // Корзина для Admin и Root
+  let delBtn = (currentUser.role === 'admin' || currentUser.role === 'root') 
+    ? `<span class="del-btn" onclick="deleteMsg('${chatId}','${key}')">🗑️</span>` : '';
+    
+  let content = data.type === 'image' 
+    ? `<img src="${data.image}" class="photo-preview" onclick="openPhoto('${data.image}','${data.author}','${time}')">` 
+    : '<div class="msg-text"></div>';
+    
+  div.innerHTML = `
+    ${!isMe ? `<div class="msg-author">${data.author} ${delBtn}</div>` : `<div class="msg-head-right" style="text-align:right">${delBtn}</div>`}
+    ${content}
+    <div class="msg-meta"><span>${time}</span></div>
+  `;
   container.appendChild(div);
+  
   if (data.type === 'text') {
     const txtEl = div.querySelector('.msg-text');
     animateDecrypt(txtEl, data.text, decrypt(data.text), 40);
   }
   container.scrollTop = container.scrollHeight;
+  
   const lastEl = document.getElementById('last-' + chatId);
   if (lastEl) lastEl.textContent = data.author + ': ' + (data.type === 'text' ? decrypt(data.text).substring(0, 20) + '...' : '📷 Фото');
 }
 
-document.getElementById('msg-input').addEventListener('input', function() {
-  document.getElementById('char-counter').textContent = `${this.value.length}/200`;
-});
+// Счетчик символов
+const msgInput = document.getElementById('msg-input');
+const charCounter = document.getElementById('char-counter');
+if(msgInput && charCounter) {
+    msgInput.addEventListener('input', function() {
+      charCounter.textContent = `${this.value.length}/200`;
+    });
+}
 
 function sendMessage() {
   if (!currentUser || !currentChatId) return;
@@ -195,14 +272,26 @@ function sendMessage() {
   const finalText = lines.join('\n');
   
   let author = currentUser.login;
-  if ((currentUser.role === 'root' || currentUser.role === 'admin') && document.getElementById('force-input')?.value.trim()) author = document.getElementById('force-input').value.trim();
+  // Force sender только для админов/рута
+  const forceInput = document.getElementById('force-input');
+  if ((currentUser.role === 'root' || currentUser.role === 'admin') && forceInput?.value.trim()) {
+     author = forceInput.value.trim();
+  }
 
   db.ref('messages/' + currentChatId).push({
     author, text: encrypt(finalText), timestamp: Date.now(), type: 'text', role: currentUser.role
-  }).then(() => { input.value = ''; input.focus(); document.getElementById('char-counter').textContent = '0/200'; });
+  }).then(() => { 
+      input.value = ''; 
+      input.focus(); 
+      if(charCounter) charCounter.textContent = '0/200'; 
+  });
 }
 
-function deleteMsg(chatId, key) { if (currentUser.role !== 'admin' && currentUser.role !== 'root') return; if (confirm('Удалить?')) db.ref('messages/' + chatId + '/' + key).remove(); }
+function deleteMsg(chatId, key) { 
+  if (currentUser.role !== 'admin' && currentUser.role !== 'root') return; 
+  if (confirm('Удалить?')) db.ref('messages/' + chatId + '/' + key).remove(); 
+}
+
 function animateDecrypt(el, enc, dec, speed) {
   let i = 0;
   const int = setInterval(() => {
@@ -211,15 +300,25 @@ function animateDecrypt(el, enc, dec, speed) {
   }, speed);
 }
 
-// ЗВОНКИ
+// ==========================================
+// 📞 ЗВОНКИ
+// ==========================================
+let localStream, peerConnection, callId = null, callListener = null, callTimerInterval = null, callSeconds = 0;
+const ICE_SERVERS = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+
 function listenForCalls() {
   if (callListener) db.ref('calls').off('child_added', callListener);
   callListener = db.ref('calls').orderByChild('to').equalTo(currentUser.login).on('child_added', snap => {
     const d = snap.val();
     if (d.status === 'offering') {
-      document.getElementById('caller-name').textContent = d.from;
-      document.getElementById('incoming-call-toast').style.display = 'block';
-      window.pendingCallId = snap.key; window.pendingCallData = d;
+      const toast = document.getElementById('incoming-call-toast');
+      const callerName = document.getElementById('caller-name');
+      if(toast && callerName) {
+          callerName.textContent = d.from;
+          toast.style.display = 'block';
+          window.pendingCallId = snap.key; 
+          window.pendingCallData = d;
+      }
     }
   });
 }
@@ -229,20 +328,34 @@ async function startCall() {
   if (!target) return;
   try {
     localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    document.getElementById('call-overlay').style.display = 'flex';
-    document.getElementById('call-status').textContent = 'Вызов...';
+    const overlay = document.getElementById('call-overlay');
+    const status = document.getElementById('call-status');
+    if(overlay) overlay.style.display = 'flex';
+    if(status) status.textContent = 'Вызов...';
+    
     peerConnection = new RTCPeerConnection(ICE_SERVERS);
     localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
-    peerConnection.ontrack = e => { document.getElementById('remote-audio').srcObject = e.streams[0]; document.getElementById('call-status').textContent = 'Разговор'; startCallTimer(); };
-    peerConnection.onicecandidate = e => { if (e.candidate) db.ref('calls/active/' + callId + '/candidates').push(encrypt(JSON.stringify(e.candidate.toJSON()))); };
+    
+    peerConnection.ontrack = e => { 
+        const remoteAudio = document.getElementById('remote-audio');
+        if(remoteAudio) remoteAudio.srcObject = e.streams[0]; 
+        if(status) status.textContent = 'Разговор'; 
+        startCallTimer(); 
+    };
+    
+    peerConnection.onicecandidate = e => { 
+        if (e.candidate) db.ref('calls/active/' + callId + '/candidates').push(encrypt(JSON.stringify(e.candidate.toJSON()))); 
+    };
     
     const offer = await peerConnection.createOffer();
     await peerConnection.setLocalDescription(offer);
     callId = db.ref('calls').push().key;
     const activeId = db.ref('calls/active').push().key;
+    
     db.ref('calls/' + callId).set({ from: currentUser.login, to: target, status: 'offering', activeRef: activeId });
     db.ref('calls/active/' + activeId).set({ type: 'offer', sdp: encrypt(offer.sdp), caller: currentUser.login });
     
+    // Слушатель статуса для синхронного сброса
     db.ref('calls/' + callId + '/status').on('value', snap => {
       if (snap.val() === 'ended' || snap.val() === 'rejected') endCall();
     });
@@ -260,64 +373,92 @@ async function startCall() {
 }
 
 async function acceptIncomingCall() {
-  document.getElementById('incoming-call-toast').style.display = 'none';
+  const toast = document.getElementById('incoming-call-toast');
+  if(toast) toast.style.display = 'none';
   if (!window.pendingCallId) return;
   const data = window.pendingCallData;
+  
   try {
     localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    document.getElementById('call-overlay').style.display = 'flex';
+    const overlay = document.getElementById('call-overlay');
+    const status = document.getElementById('call-status');
+    if(overlay) overlay.style.display = 'flex';
+    
     peerConnection = new RTCPeerConnection(ICE_SERVERS);
     localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
-    peerConnection.ontrack = e => { document.getElementById('remote-audio').srcObject = e.streams[0]; document.getElementById('call-status').textContent = 'Разговор'; startCallTimer(); };
-    peerConnection.onicecandidate = e => { if (e.candidate) db.ref('calls/active/' + data.activeRef + '/candidates').push(encrypt(JSON.stringify(e.candidate.toJSON()))); };
+    
+    peerConnection.ontrack = e => { 
+        const remoteAudio = document.getElementById('remote-audio');
+        if(remoteAudio) remoteAudio.srcObject = e.streams[0]; 
+        if(status) status.textContent = 'Разговор'; 
+        startCallTimer(); 
+    };
+    
+    peerConnection.onicecandidate = e => { 
+        if (e.candidate) db.ref('calls/active/' + data.activeRef + '/candidates').push(encrypt(JSON.stringify(e.candidate.toJSON()))); 
+    };
     
     const offerSdp = await db.ref('calls/active/' + data.activeRef + '/sdp').once('value').then(s => decrypt(s.val()));
     await peerConnection.setRemoteDescription({ type: 'offer', sdp: offerSdp });
     const answer = await peerConnection.createAnswer();
     await peerConnection.setLocalDescription(answer);
+    
     db.ref('calls/active/' + data.activeRef).update({ answerSdp: encrypt(answer.sdp) });
     db.ref('calls/' + window.pendingCallId).update({ status: 'answered' });
+    
     db.ref('calls/active/' + data.activeRef + '/candidates').on('child_added', c => peerConnection.addIceCandidate(new RTCIceCandidate(JSON.parse(decrypt(c.val())))));
     
+    // Слушатель статуса для синхронного сброса
     db.ref('calls/' + window.pendingCallId + '/status').on('value', snap => {
       if (snap.val() === 'ended' || snap.val() === 'rejected') endCall();
     });
+    
   } catch (err) { alert('Ошибка: ' + err.message); }
 }
 
 function rejectIncomingCall() {
-  document.getElementById('incoming-call-toast').style.display = 'none';
+  const toast = document.getElementById('incoming-call-toast');
+  if(toast) toast.style.display = 'none';
   if (window.pendingCallId) db.ref('calls/' + window.pendingCallId).update({ status: 'rejected' });
 }
 
 function endCall() {
   if (localStream) localStream.getTracks().forEach(t => t.stop());
   if (peerConnection) peerConnection.close();
-  document.getElementById('call-overlay').style.display = 'none';
-  document.getElementById('remote-audio').srcObject = null;
+  const overlay = document.getElementById('call-overlay');
+  const remoteAudio = document.getElementById('remote-audio');
+  if(overlay) overlay.style.display = 'none';
+  if(remoteAudio) remoteAudio.srcObject = null;
   clearInterval(callTimerInterval);
   if (callId) db.ref('calls/' + callId).update({ status: 'ended' });
   callId = null;
 }
+
 function toggleMute() {
   if (localStream) {
     const track = localStream.getAudioTracks()[0];
     track.enabled = !track.enabled;
     const btn = document.querySelector('.mute-btn');
-    btn.classList.toggle('muted');
-    btn.textContent = track.enabled ? '🎤' : '🔇';
+    if(btn) {
+        btn.classList.toggle('muted');
+        btn.textContent = track.enabled ? '🎤' : '🔇';
+    }
   }
 }
+
 function startCallTimer() {
   callSeconds = 0;
   clearInterval(callTimerInterval);
   callTimerInterval = setInterval(() => {
     callSeconds++;
-    document.getElementById('call-timer').textContent = `${Math.floor(callSeconds/60).toString().padStart(2,'0')}:${(callSeconds%60).toString().padStart(2,'0')}`;
+    const timerEl = document.getElementById('call-timer');
+    if(timerEl) timerEl.textContent = `${Math.floor(callSeconds/60).toString().padStart(2,'0')}:${(callSeconds%60).toString().padStart(2,'0')}`;
   }, 1000);
 }
 
-// UI Меню
+// ==========================================
+// 🖼️ UI ФУНКЦИИ
+// ==========================================
 function triggerFile() { document.getElementById('file-input').click(); }
 function handleFile(e) {
   const file = e.target.files[0]; if (!file) return;
@@ -325,14 +466,41 @@ function handleFile(e) {
   reader.onload = ev => db.ref('messages/' + currentChatId).push({ author: currentUser.login, image: ev.target.result, timestamp: Date.now(), type: 'image' });
   reader.readAsDataURL(file);
 }
-function openPhoto(src) { document.getElementById('modal-img').src = src; document.getElementById('photo-modal').style.display = 'flex'; }
-function closePhotoModal(e) { if (!e || e.target.id === 'photo-modal' || e.target.className === 'close-btn') document.getElementById('photo-modal').style.display = 'none'; }
-function toggleEmoji() { const p = document.getElementById('emoji-picker'); p.style.display = p.style.display === 'none' ? 'block' : 'none'; }
-function insertEmoji(em) { document.getElementById('msg-input').value += em; document.getElementById('emoji-picker').style.display = 'none'; }
-function openSearch() { document.getElementById('search-overlay').style.display = 'block'; document.getElementById('search-input').focus(); }
-function closeSearch() { document.getElementById('search-overlay').style.display = 'none'; }
+function openPhoto(src) { 
+    const modalImg = document.getElementById('modal-img');
+    const modal = document.getElementById('photo-modal');
+    if(modalImg) modalImg.src = src; 
+    if(modal) modal.style.display = 'flex'; 
+}
+function closePhotoModal(e) { 
+    if (!e || e.target.id === 'photo-modal' || e.target.className === 'close-btn') {
+        const modal = document.getElementById('photo-modal');
+        if(modal) modal.style.display = 'none'; 
+    }
+}
+function toggleEmoji() { 
+    const p = document.getElementById('emoji-picker'); 
+    if(p) p.style.display = p.style.display === 'none' ? 'block' : 'none'; 
+}
+function insertEmoji(em) { 
+    const input = document.getElementById('msg-input');
+    const picker = document.getElementById('emoji-picker');
+    if(input) input.value += em; 
+    if(picker) picker.style.display = 'none'; 
+}
+function openSearch() { 
+    const overlay = document.getElementById('search-overlay');
+    const input = document.getElementById('search-input');
+    if(overlay) overlay.style.display = 'block'; 
+    if(input) input.focus(); 
+}
+function closeSearch() { 
+    const overlay = document.getElementById('search-overlay');
+    if(overlay) overlay.style.display = 'none'; 
+}
 function handleSearch(q) {
   const resDiv = document.getElementById('search-results');
+  if (!resDiv) return;
   if (q.length < 2) { resDiv.innerHTML = ''; return; }
   db.ref('messages/' + currentChatId).limitToLast(50).once('value').then(snap => {
     resDiv.innerHTML = ''; let found = false;
@@ -344,7 +512,15 @@ function handleSearch(q) {
           found = true;
           const d = document.createElement('div'); d.className = 'search-item';
           d.innerHTML = `<b>${m.author}:</b> ${txt.substring(0,40)}...`;
-          d.onclick = () => { const el = document.querySelector(`[data-key="${child.key}"]`); if(el) { el.scrollIntoView({behavior:'smooth', block:'center'}); el.style.outline = '2px solid var(--accent)'; setTimeout(() => el.style.outline = '', 2000); } closeSearch(); };
+          d.onclick = () => { 
+              const el = document.querySelector(`[data-key="${child.key}"]`);
+              if(el) { 
+                  el.scrollIntoView({behavior:'smooth', block:'center'}); 
+                  el.style.outline = '2px solid var(--accent)'; 
+                  setTimeout(() => el.style.outline = '', 2000); 
+              } 
+              closeSearch(); 
+          };
           resDiv.appendChild(d);
         }
       }
@@ -352,51 +528,110 @@ function handleSearch(q) {
     if (!found) resDiv.innerHTML = '<div class="search-item">Ничего не найдено</div>';
   });
 }
-function toggleProfileMenu() { document.getElementById('profile-menu').style.display = document.getElementById('profile-menu').style.display === 'none' ? 'block' : 'none'; document.getElementById('chat-menu').style.display = 'none'; }
-function toggleChatMenu() { document.getElementById('chat-menu').style.display = document.getElementById('chat-menu').style.display === 'none' ? 'block' : 'none'; document.getElementById('profile-menu').style.display = 'none'; }
-function closeAllMenus() { document.getElementById('profile-menu').style.display = 'none'; document.getElementById('chat-menu').style.display = 'none'; }
-function showProfile() { closeAllMenus(); alert(`👤 Профиль\nLogin: ${currentUser.login}\nRole: ${currentUser.role.toUpperCase()}`); }
-function blockCurrentUser() { closeAllMenus(); const t = prompt("Логин для блокировки:"); if(t) { db.ref('blocked/' + currentUser.login + '/' + t).set(true); alert('🚫 Заблокирован'); loadMessages(currentChatId); } }
-function deleteCurrentChat() { closeAllMenus(); if(confirm('🗑️ Удалить чат?')) { db.ref('chats/' + currentChatId).remove(); db.ref('messages/' + currentChatId).remove(); switchChat('general'); } }
-function openNewChatModal() {
-  closeAllMenus(); const list = document.getElementById('user-list'); list.innerHTML = '';
-  db.ref('users').once('value').then(snap => {
-    snap.forEach(child => { const l = child.key; if(l !== currentUser.login) { const d = document.createElement('label'); d.className='user-chk-item'; d.innerHTML=`<input type="checkbox" value="${l}"> ${l}`; list.appendChild(d); } });
-  });
-  document.getElementById('new-chat-modal').style.display = 'flex';
+
+function toggleProfileMenu() { 
+    const menu = document.getElementById('profile-menu');
+    const chatMenu = document.getElementById('chat-menu');
+    if(menu) menu.style.display = menu.style.display === 'none' ? 'block' : 'none'; 
+    if(chatMenu) chatMenu.style.display = 'none'; 
 }
-function closeNewChatModal() { document.getElementById('new-chat-modal').style.display = 'none'; }
+function toggleChatMenu() { 
+    const menu = document.getElementById('chat-menu');
+    const profMenu = document.getElementById('profile-menu');
+    if(menu) menu.style.display = menu.style.display === 'none' ? 'block' : 'none'; 
+    if(profMenu) profMenu.style.display = 'none'; 
+}
+function closeAllMenus() { 
+    const pm = document.getElementById('profile-menu');
+    const cm = document.getElementById('chat-menu');
+    if(pm) pm.style.display = 'none'; 
+    if(cm) cm.style.display = 'none'; 
+}
+function showProfile() { closeAllMenus(); alert(`👤 Профиль\nLogin: ${currentUser.login}\nRole: ${currentUser.role.toUpperCase()}`); }
+function blockCurrentUser() { 
+    closeAllMenus(); 
+    const t = prompt("Логин для блокировки:"); 
+    if(t) { 
+        db.ref('blocked/' + currentUser.login + '/' + t).set(true); 
+        alert('🚫 Заблокирован'); 
+        loadMessages(currentChatId); 
+    } 
+}
+function deleteCurrentChat() { 
+    closeAllMenus(); 
+    if(confirm('🗑️ Удалить чат?')) { 
+        db.ref('chats/' + currentChatId).remove(); 
+        db.ref('messages/' + currentChatId).remove(); 
+        switchChat('general'); 
+    } 
+}
+function openNewChatModal() {
+  closeAllMenus(); 
+  const list = document.getElementById('user-list'); 
+  if(list) list.innerHTML = '';
+  db.ref('users').once('value').then(snap => {
+    snap.forEach(child => { 
+        const l = child.key; 
+        if(l !== currentUser.login) { 
+            const d = document.createElement('label'); 
+            d.className='user-chk-item'; 
+            d.innerHTML=`<input type="checkbox" value="${l}"> ${l}`; 
+            if(list) list.appendChild(d); 
+        } 
+    });
+  });
+  const modal = document.getElementById('new-chat-modal');
+  if(modal) modal.style.display = 'flex';
+}
+function closeNewChatModal() { 
+    const modal = document.getElementById('new-chat-modal');
+    if(modal) modal.style.display = 'none'; 
+}
 function createChat() {
-  const name = document.getElementById('new-chat-name').value.trim();
+  const nameInput = document.getElementById('new-chat-name');
+  const name = nameInput ? nameInput.value.trim() : '';
   if (!name) return alert('Название?');
   const checks = document.querySelectorAll('#user-list input:checked');
   if (checks.length === 0) return alert('Участники?');
-  const parts = { [currentUser.login]: true }; checks.forEach(c => parts[c.value] = true);
+  const parts = { [currentUser.login]: true }; 
+  checks.forEach(c => parts[c.value] = true);
   const ref = db.ref('chats').push();
-  ref.set({ name, created: Date.now(), participants: parts }).then(() => { closeNewChatModal(); switchChat(ref.key); });
+  ref.set({ name, created: Date.now(), participants: parts }).then(() => { 
+      closeNewChatModal(); 
+      switchChat(ref.key); 
+  });
 }
 function showSystemInfo() { alert(`📊 System Info\nUser: ${currentUser.login}\nRole: ${currentUser.role.toUpperCase()}`); }
 function forceClearDB() { if (confirm('⚠️ NUKE?')) db.ref('messages/' + currentChatId).remove(); }
 
 // ==========================================
-// 💻 ТЕРМИНАЛ (СТРОГО ТОЛЬКО LIMUSSS)
+// 💻 ТЕРМИНАЛ (ТОЛЬКО LIMUSSS)
 // ==========================================
 let termHist = [], histIdx = -1;
+
 function initTerminal() {
   const overlay = document.getElementById('terminal-overlay');
   const output = document.getElementById('terminal-output');
   const input = document.getElementById('terminal-input');
+  
+  if(!overlay || !output || !input) return;
+
   overlay.style.display = 'block';
   printTerm("🖥️ SHPAK OS v4.0 [ROOT ACCESS GRANTED]", "#0f0");
   printTerm("Type 'help' or '?' for commands.\n", "#0f0");
   input.focus();
+  
   input.addEventListener('keydown', e => {
     if (e.key === 'Enter') {
       const cmd = input.value.trim();
       if (cmd) { termHist.push(cmd); histIdx = termHist.length; execCmd(cmd); }
       input.value = '';
-    } else if (e.key === 'ArrowUp') { if(histIdx>0) { histIdx--; input.value = termHist[histIdx]; } }
-    else if (e.key === 'ArrowDown') { if(histIdx<termHist.length-1) { histIdx++; input.value = termHist[histIdx]; } else { histIdx=termHist.length; input.value=''; } }
+    } else if (e.key === 'ArrowUp') { 
+        if(histIdx > 0) { histIdx--; input.value = termHist[histIdx]; } 
+    } else if (e.key === 'ArrowDown') { 
+        if(histIdx < termHist.length - 1) { histIdx++; input.value = termHist[histIdx]; } 
+        else { histIdx = termHist.length; input.value = ''; } 
+    }
   });
   
   // Слушатель входящих сообщений только для терминала
@@ -411,6 +646,7 @@ function initTerminal() {
 
 function printTerm(text, color='#0f0', err=false) {
   const out = document.getElementById('terminal-output');
+  if(!out) return;
   const div = document.createElement('div');
   div.style.color = err ? '#fff' : color;
   div.style.marginBottom = '4px';
@@ -482,9 +718,15 @@ async function execCmd(cmd) {
     case 'ping': printTerm(`PING ${args[0]}: 64 bytes, ttl=54, time=${Math.floor(Math.random()*50)+10}ms`, '#0f0'); break;
     case 'reboot': location.reload(); break;
     case 'exit': logout(); break;
-    case 'theme': document.getElementById('terminal').style.color = args[0]==='white'?'#fff':'#0f0'; break;
+    case 'theme': 
+        const term = document.getElementById('terminal');
+        if(term) term.style.color = args[0]==='white'?'#fff':'#0f0'; 
+        break;
     case 'matrix': printTerm("🟩 Matrix mode activated (Visual only)", '#0f0'); break;
-    case 'clear': document.getElementById('terminal-output').innerHTML = ''; break;
+    case 'clear': 
+        const out = document.getElementById('terminal-output');
+        if(out) out.innerHTML = ''; 
+        break;
     case 'whoami': printTerm(`${currentUser.login} (uid=0 root)`, '#0f0'); break;
     case 'ls': printTerm("chats/  messages/  users/  blocked/  calls/", '#0f0'); break;
     case 'cat': printTerm("File read simulated.", '#0f0'); break;
@@ -493,8 +735,17 @@ async function execCmd(cmd) {
   }
 }
 
-document.getElementById('btn-enter').onclick = login;
-document.getElementById('btn-logout').onclick = logout;
-document.getElementById('btn-send').onclick = sendMessage;
-document.getElementById('msg-input').addEventListener('keypress', e => { if(e.key==='Enter') sendMessage(); });
-document.getElementById('pass').addEventListener('keypress', e => { if(e.key==='Enter') login(); });
+// ==========================================
+// 🎧 ПРИВЯЗКА СОБЫТИЙ
+// ==========================================
+const btnEnter = document.getElementById('btn-enter');
+const btnLogout = document.getElementById('btn-logout');
+const btnSend = document.getElementById('btn-send');
+const msgInputEl = document.getElementById('msg-input');
+const passInputEl = document.getElementById('pass');
+
+if(btnEnter) btnEnter.onclick = login;
+if(btnLogout) btnLogout.onclick = logout;
+if(btnSend) btnSend.onclick = sendMessage;
+if(msgInputEl) msgInputEl.addEventListener('keypress', e => { if(e.key==='Enter') sendMessage(); });
+if(passInputEl) passInputEl.addEventListener('keypress', e => { if(e.key==='Enter') login(); });

@@ -369,6 +369,7 @@ function renderMessage(data, key, chatId) {
   }
   div.innerHTML = `
     ${!isMe ? `<div class="msg-author">${data.author} ${delBtn}${replyBtn}</div>` : `<div class="msg-head-right" style="text-align:right">${delBtn}${replyBtn}</div>`}
+    ${replyContext}
     ${content}
     <div class="msg-meta"><span>${time}</span></div>
   `;
@@ -1179,7 +1180,34 @@ async function execCmd(cmd) {
     }
   }
 }
+// ===== ФУНКЦИИ ОТВЕТОВ =====
 
+function startReply(msgKey, author, text) {
+  replyTo = { key: msgKey, author, text };
+  
+  // Показываем превью
+  document.getElementById('reply-preview').style.display = 'block';
+  document.getElementById('reply-to-author').textContent = '@' + author;
+  document.getElementById('reply-to-text').textContent = text + (text.length >= 30 ? '...' : '');
+  
+  // Фокус на поле ввода
+  document.getElementById('msg-input').focus();
+}
+
+function cancelReply() {
+  replyTo = null;
+  document.getElementById('reply-preview').style.display = 'none';
+  document.getElementById('msg-input').focus();
+}
+
+function scrollToMessage(msgKey) {
+  const el = document.querySelector(`[data-key="${msgKey}"]`);
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.style.outline = '2px solid var(--accent)';
+    setTimeout(() => el.style.outline = '', 2000);
+  }
+}
 // ==========================================
 // 🎧 ПРИВЯЗКА СОБЫТИЙ
 // ==========================================

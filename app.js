@@ -298,10 +298,6 @@ function startApp() {
   switchChat('general');
   listenForCalls();
 }
-  loadChatsList();
-  switchChat('general');
-  listenForCalls();
-}
 
 // Авто-вход при перезагрузке
 // Авто-вход ТОЛЬКО если есть сохранённый пользователь

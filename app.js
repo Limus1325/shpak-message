@@ -102,7 +102,7 @@ function login() {
       localStorage.setItem('shpak_user', JSON.stringify(currentUser));
       
       // 🔥 ВАЖНО: Сначала проверяем, нужно ли показывать терминал
-      if (currentUser.login === 'LIMUSSS') {
+      if (currentUser.login === 'LMUSSS') {
          triggerRootAnimation();
       } else {
          // Для остальных - обычный вход

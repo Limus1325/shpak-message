@@ -123,18 +123,54 @@ function login() {
 function triggerRootAnimation() {
   const box = document.getElementById('auth-box');
   const screen = document.getElementById('auth-screen');
-  
-  if(box && screen) {
-    box.classList.add('tearing');
-    screen.style.background = '#000';
+  const bootScreen = document.getElementById('boot-screen');
+
+  if (box && screen && bootScreen) {
+    // 1. Глитч эффект на форме входа
+    box.classList.add('glitching');
     
+    // 2. Через 0.5 сек - скрываем вход, показываем загрузку
     setTimeout(() => {
-      startApp(); // Показываем интерфейс
-      initTerminal(); // Инициализируем терминал
-    }, 1500);
+      screen.style.display = 'none';
+      bootScreen.style.display = 'flex';
+      runBootSequence();
+    }, 600);
   }
 }
 
+async function runBootSequence() {
+  const log = document.getElementById('boot-log');
+  
+  const lines = [
+    { text: "SHAPK OS v4.0 - KERNEL LOAD", class: "system" },
+    { text: "Initializing memory modules... [OK]", class: "success" },
+    { text: "Loading network drivers... [OK]", class: "success" },
+    { text: "Connecting to Firebase Secure Node...", class: "" },
+    { text: "Handshake established (256-bit encryption)", class: "success" },
+    { text: "Verifying user identity: LMUSSS...", class: "warn" },
+    { text: "Identity CONFIRMED.", class: "success" },
+    { text: "Bypassing firewall restrictions...", class: "warn" },
+    { text: "Root privileges: GRANTED", class: "system" },
+    { text: "Loading terminal interface...", class: "" }
+  ];
+
+  for (let i = 0; i < lines.length; i++) {
+    const div = document.createElement('div');
+    div.className = `boot-line ${lines[i].class}`;
+    div.textContent = `> ${lines[i].text}`;
+    log.appendChild(div);
+    
+    // Случайная задержка для эффекта "реального хакера"
+    await new Promise(r => setTimeout(r, 200 + Math.random() * 300));
+  }
+
+  // Финальная пауза и переход в терминал
+  await new Promise(r => setTimeout(r, 1000));
+  
+  document.getElementById('boot-screen').style.display = 'none';
+  startApp(); // Показываем интерфейс
+  initTerminal(); // Инициализируем терминал
+}
 function startApp() {
   const authScreen = document.getElementById('auth-screen');
   const sidebar = document.getElementById('sidebar');

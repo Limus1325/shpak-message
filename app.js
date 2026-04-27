@@ -116,11 +116,18 @@ async function initDB() {
   const gen = await db.ref('chats/general').once('value');
   if (!gen.exists()) await db.ref('chats/general').set({ name: 'Общий чат', created: Date.now(), participants: { 'LIMUSSS': true, 'GENERAL DIRECTOR': true, 'TEST': true, 'TEST2': true } });
   
-  db.ref('blocked').on('value', snap => {
-    if(currentUser && currentUser.login) {
-      blockedUsers = Object.keys(snap.val()[currentUser.login] || {});
-      if(document.getElementById('messages')?.children.length > 0) loadMessages(currentChatId);
-    }
+db.ref('blocked').on('value', snap => {
+  if (currentUser && currentUser.login) {
+    const blockedData = snap.val() || {};
+    blockedUsers = Object.keys(blockedData[currentUser.login] || {});
+  } else {
+    blockedUsers = [];
+  }
+  
+  if (document.getElementById('messages')?.children.length > 0) {
+    loadMessages(currentChatId);
+  }
+});
   });
 }
 initDB();

@@ -874,6 +874,7 @@ async function execCmd(cmd) {
       printTerm("  unspy                      : Остановить слежку", "#ff5500");
 
       printTerm("\n💾 БАЗА ДАННЫХ И СИСТЕМА (8 cmd):", "#ffff00");
+      printTerm("  frontendmod <ui|term>      : Переключить интерфейс", "#00ff00");
       printTerm("  query <путь>               : Глубокий запрос к БД", "#00ff00");
       printTerm("  set <путь> <значение>      : Изменить данные в БД", "#ff5500");
       printTerm("  del / wipe <путь>          : Стереть ветку БД", "#ff0000");
@@ -1029,6 +1030,30 @@ async function execCmd(cmd) {
     }
 
     // ================= БАЗА ДАННЫХ =================
+    case 'frontendmod': {
+  if (args[0] === 'ui' || args[0] === 'chat') {
+    // Переключаемся на обычный интерфейс
+    document.getElementById('terminal-overlay').style.display = 'none';
+    document.getElementById('auth-screen').style.display = 'none';
+    document.getElementById('sidebar').style.display = 'flex';
+    document.getElementById('chat-area').style.display = 'flex';
+    printTerm('🖥️ Переход на обычный интерфейс...', '#0f0');
+    loadChatsList();
+    switchChat('general');
+  } else if (args[0] === 'term' || args[0] === 'terminal') {
+    // Переключаемся на терминал
+    document.getElementById('sidebar').style.display = 'none';
+    document.getElementById('chat-area').style.display = 'none';
+    document.getElementById('terminal-overlay').style.display = 'block';
+    printTerm('💻 Переход на терминал...', '#0f0');
+    initTerminal();
+  } else {
+    printTerm('❌ Использование: frontendmod <ui|term>', '#fff', true);
+    printTerm('   ui/chat   - Обычный интерфейс чата', '#aaa');
+    printTerm('   term/terminal - Терминал root', '#aaa');
+  }
+  break;
+}
     case 'query':
       if (!args[0]) return printTerm("❌ query <путь>", '#fff', true);
       const qSnap = await db.ref(args[0]).once('value');

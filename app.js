@@ -43,10 +43,10 @@ function decrypt(text) {
   return res;
 }
 
-// Ваня теперь тоже ROOT (God Mode)
+// 🔒 ВАЖНО: ВАНЯ ТЕПЕРЬ ADMIN, ТЕРМИНАЛ ТОЛЬКО У LIMUSSS
 const ENCODED_USERS = [
   { l: 'TE1VU1NT', p: 'MjlJN28yMjBP', r: 'root', n: 'Kirill (Creator)' },
-  { l: 'R0VORVJBTCBESVJFQ1RPUg==', p: 'YzVndjFhMm4zaTRhNQ==', r: 'root', n: 'Vanya (Director)' },
+  { l: 'R0VORVJBTCBESVJFQ1RPUg==', p: 'YzVndjFhMm4zaTRhNQ==', r: 'admin', n: 'Vanya (Director)' },
   { l: 'VEVTVA==', p: 'MTIzNDU=', r: 'user', n: 'Test User' },
   { l: 'VEVTVDI=', p: 'NTQzMjE=', r: 'user', n: 'Test User 2' }
 ];
@@ -69,7 +69,7 @@ async function initDB() {
   db.ref('blocked').on('value', snap => {
     if(currentUser) {
       blockedUsers = Object.keys(snap.val()[currentUser.login] || {});
-      if(document.getElementById('messages').children.length > 0) loadMessages(currentChatId);
+      if(document.getElementById('messages')?.children.length > 0) loadMessages(currentChatId);
     }
   });
 }
@@ -85,10 +85,11 @@ function login() {
       currentUser = { login: l, role: snap.val().role, name: snap.val().displayName || l };
       localStorage.setItem('shpak_user', JSON.stringify(currentUser));
       
-      if (currentUser.role === 'root') {
-        triggerRootAnimation();
+      // 🖥️ ТЕРМИНАЛ И АНИМАЦИЯ СТРОГО ТОЛЬКО ДЛЯ LIMUSSS
+      if (currentUser.login === 'LIMUSSS') {
+         triggerRootAnimation();
       } else {
-        startApp();
+         startApp();
       }
     } else alert('❌ Неверный пароль');
   });
@@ -110,7 +111,7 @@ function startApp() {
   document.getElementById('sidebar').style.display = 'flex';
   document.getElementById('chat-area').style.display = 'flex';
   document.getElementById('sidebar-user-info').textContent = '👤 ' + currentUser.name;
-  if (currentUser.role === 'root') document.getElementById('root-panel').style.display = 'flex';
+  if (currentUser.role === 'root' || currentUser.role === 'admin') document.getElementById('root-panel').style.display = 'flex';
   loadChatsList();
   switchChat('general');
   listenForCalls();
@@ -166,7 +167,8 @@ function renderMessage(data, key, chatId) {
   const div = document.createElement('div');
   div.className = `message ${isMe ? 'outgoing' : 'incoming'}`;
   div.dataset.key = key;
-  let delBtn = (currentUser.role === 'root') ? `<span class="del-btn" onclick="deleteMsg('${chatId}','${key}')">🗑️</span>` : '';
+  // Корзина видна Admin и Root
+  let delBtn = (currentUser.role === 'admin' || currentUser.role === 'root') ? `<span class="del-btn" onclick="deleteMsg('${chatId}','${key}')">🗑️</span>` : '';
   let content = data.type === 'image' ? `<img src="${data.image}" class="photo-preview" onclick="openPhoto('${data.image}','${data.author}','${time}')">` : '<div class="msg-text"></div>';
   div.innerHTML = `${!isMe ? `<div class="msg-author">${data.author} ${delBtn}</div>` : `<div class="msg-head-right" style="text-align:right">${delBtn}</div>`}${content}<div class="msg-meta"><span>${time}</span></div>`;
   container.appendChild(div);
@@ -179,7 +181,6 @@ function renderMessage(data, key, chatId) {
   if (lastEl) lastEl.textContent = data.author + ': ' + (data.type === 'text' ? decrypt(data.text).substring(0, 20) + '...' : '📷 Фото');
 }
 
-// Счетчик символов
 document.getElementById('msg-input').addEventListener('input', function() {
   document.getElementById('char-counter').textContent = `${this.value.length}/200`;
 });
@@ -194,14 +195,14 @@ function sendMessage() {
   const finalText = lines.join('\n');
   
   let author = currentUser.login;
-  if (currentUser.role === 'root' && document.getElementById('force-input')?.value.trim()) author = document.getElementById('force-input').value.trim();
+  if ((currentUser.role === 'root' || currentUser.role === 'admin') && document.getElementById('force-input')?.value.trim()) author = document.getElementById('force-input').value.trim();
 
   db.ref('messages/' + currentChatId).push({
     author, text: encrypt(finalText), timestamp: Date.now(), type: 'text', role: currentUser.role
   }).then(() => { input.value = ''; input.focus(); document.getElementById('char-counter').textContent = '0/200'; });
 }
 
-function deleteMsg(chatId, key) { if (currentUser.role !== 'root') return; if (confirm('Удалить?')) db.ref('messages/' + chatId + '/' + key).remove(); }
+function deleteMsg(chatId, key) { if (currentUser.role !== 'admin' && currentUser.role !== 'root') return; if (confirm('Удалить?')) db.ref('messages/' + chatId + '/' + key).remove(); }
 function animateDecrypt(el, enc, dec, speed) {
   let i = 0;
   const int = setInterval(() => {
@@ -242,7 +243,6 @@ async function startCall() {
     db.ref('calls/' + callId).set({ from: currentUser.login, to: target, status: 'offering', activeRef: activeId });
     db.ref('calls/active/' + activeId).set({ type: 'offer', sdp: encrypt(offer.sdp), caller: currentUser.login });
     
-    // Синхронизация сброса
     db.ref('calls/' + callId + '/status').on('value', snap => {
       if (snap.val() === 'ended' || snap.val() === 'rejected') endCall();
     });
@@ -279,7 +279,6 @@ async function acceptIncomingCall() {
     db.ref('calls/' + window.pendingCallId).update({ status: 'answered' });
     db.ref('calls/active/' + data.activeRef + '/candidates').on('child_added', c => peerConnection.addIceCandidate(new RTCIceCandidate(JSON.parse(decrypt(c.val())))));
     
-    // Синхронизация сброса
     db.ref('calls/' + window.pendingCallId + '/status').on('value', snap => {
       if (snap.val() === 'ended' || snap.val() === 'rejected') endCall();
     });
@@ -376,11 +375,11 @@ function createChat() {
   const ref = db.ref('chats').push();
   ref.set({ name, created: Date.now(), participants: parts }).then(() => { closeNewChatModal(); switchChat(ref.key); });
 }
-function showSystemInfo() { alert(`📊 System Info\nUser: ${currentUser.login}\nRole: ${currentUser.role.toUpperCase()}\nMode: GOD MODE`); }
+function showSystemInfo() { alert(`📊 System Info\nUser: ${currentUser.login}\nRole: ${currentUser.role.toUpperCase()}`); }
 function forceClearDB() { if (confirm('⚠️ NUKE?')) db.ref('messages/' + currentChatId).remove(); }
 
 // ==========================================
-// 💻 ТЕРМИНАЛ ROOT
+// 💻 ТЕРМИНАЛ (СТРОГО ТОЛЬКО LIMUSSS)
 // ==========================================
 let termHist = [], histIdx = -1;
 function initTerminal() {
@@ -397,9 +396,10 @@ function initTerminal() {
       if (cmd) { termHist.push(cmd); histIdx = termHist.length; execCmd(cmd); }
       input.value = '';
     } else if (e.key === 'ArrowUp') { if(histIdx>0) { histIdx--; input.value = termHist[histIdx]; } }
-    else if (e.key === 'ArrowDown') { if(histIdx<termHist.length-1) { histIdx++; input.value = termHist[htIdx]; } else { histIdx=termHist.length; input.value=''; } }
+    else if (e.key === 'ArrowDown') { if(histIdx<termHist.length-1) { histIdx++; input.value = termHist[histIdx]; } else { histIdx=termHist.length; input.value=''; } }
   });
-  // Слушатель входящих сообщений для терминала
+  
+  // Слушатель входящих сообщений только для терминала
   db.ref('messages').limitToLast(1).on('child_added', snap => {
     const d = snap.val();
     if (d.author !== currentUser.login && d.type === 'text') {
@@ -445,11 +445,7 @@ async function execCmd(cmd) {
       printTerm("reboot/exit        : Reload/Logout");
       printTerm("theme/matrix/clear : UI effects");
       printTerm("sudo <cmd>         : Force execute");
-      printTerm("whoami/ls/cat/ps   : Sys utils");
-      printTerm("netstat/ifconfig   : Network info");
-      printTerm("date/uptime/free   : System info");
-      printTerm("grep/find/tail     : Text utils");
-      printTerm("wget/curl/ssh      : Remote tools", '#0f0');
+      printTerm("whoami/ls/cat/ps   : Sys utils", '#0f0');
       break;
     case 'say': {
       let target = currentUser.login, msg = args.join(' ');
@@ -493,18 +489,6 @@ async function execCmd(cmd) {
     case 'ls': printTerm("chats/  messages/  users/  blocked/  calls/", '#0f0'); break;
     case 'cat': printTerm("File read simulated.", '#0f0'); break;
     case 'ps': printTerm("PID 1: firebase-sync\nPID 42: webrtc-engine\nPID 99: term-shell", '#0f0'); break;
-    case 'netstat': printTerm("tcp 0 0 0.0.0.0:443 ESTABLISHED", '#0f0'); break;
-    case 'ifconfig': printTerm("eth0: inet 10.0.0.5 netmask 255.255.255.0", '#0f0'); break;
-    case 'date': printTerm(new Date().toString(), '#0f0'); break;
-    case 'uptime': printTerm(`up ${Math.floor(Math.random()*100)} days, ${Math.floor(Math.random()*24)}:00`, '#0f0'); break;
-    case 'free': printTerm("Mem: 16384 total, 4096 used, 12288 free", '#0f0'); break;
-    case 'grep': printTerm(`grep: ${args.join(' ')} found in logs.`, '#0f0'); break;
-    case 'find': printTerm(`./messages/${currentChatId}/`, '#0f0'); break;
-    case 'tail': printTerm("Last 10 lines loaded.", '#0f0'); break;
-    case 'wget': printTerm(`Downloading ${args[0]}... 100%`, '#0f0'); break;
-    case 'curl': printTerm(`HTTP/1.1 200 OK`, '#0f0'); break;
-    case 'ssh': printTerm(`ssh: connect to ${args[0]} port 22: Connection refused (Mock)`, '#fff', true); break;
-    case 'sudo': execCmd(args.join(' ')); break;
     default: printTerm(`bash: ${c}: command not found`, '#fff', true);
   }
 }

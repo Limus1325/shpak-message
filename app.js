@@ -117,7 +117,7 @@ async function initDB() {
   if (!gen.exists()) await db.ref('chats/general').set({ name: 'Общий чат', created: Date.now(), participants: { 'LIMUSSS': true, 'GENERAL DIRECTOR': true, 'TEST': true, 'TEST2': true } });
   
   db.ref('blocked').on('value', snap => {
-    if(currentUser) {
+    if(currentUser && currentUser.login) {
       blockedUsers = Object.keys(snap.val()[currentUser.login] || {});
       if(document.getElementById('messages')?.children.length > 0) loadMessages(currentChatId);
     }

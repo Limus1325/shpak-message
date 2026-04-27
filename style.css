@@ -206,3 +206,31 @@ body { font-family: 'Special Elite', monospace; background: #e8dcc8; height: 100
   80% { transform: translate(2px, 2px); filter: hue-rotate(360deg); }
   100% { transform: translate(0); filter: hue-rotate(0deg); }
 }
+/* ===== БЕЗУМНЫЙ ГЛИТЧ ===== */
+.auth-box.hyper-glitch {
+  animation: hyperGlitch 0.2s infinite, fadeOutChaos 1.5s forwards;
+  filter: invert(1) hue-rotate(180deg);
+}
+
+@keyframes hyperGlitch {
+  0% { transform: translate(0) skewX(0deg) scale(1); clip-path: inset(0 0 0 0); }
+  20% { transform: translate(-10px, 10px) skewX(-20deg) scale(1.1); clip-path: inset(10% 0 80% 0); filter: blur(2px); }
+  40% { transform: translate(10px, -10px) skewX(20deg) scale(0.9); clip-path: inset(80% 0 10% 0); filter: contrast(200%); }
+  60% { transform: translate(-5px, -5px) rotate(5deg) scale(1.2); clip-path: circle(20% at 50% 50%); filter: saturate(500%); }
+  80% { transform: translate(5px, 5px) rotate(-5deg) scale(0.8); clip-path: polygon(0 0, 100% 100%, 0 100%, 100% 0); filter: grayscale(100%); }
+  100% { transform: translate(0) skewX(0deg) scale(1); clip-path: inset(0 0 0 0); }
+}
+
+@keyframes fadeOutChaos {
+  0% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.5) rotate(180deg); filter: blur(10px); }
+  100% { opacity: 0; transform: scale(3) rotate(720deg); filter: blur(20px); display: none; }
+}
+
+/* Текст выворачивается */
+.glitch-text-reverse {
+  unicode-bidi: bidi-override;
+  direction: rtl;
+  color: red !important;
+  text-shadow: 2px 0 blue, -2px 0 yellow;
+}

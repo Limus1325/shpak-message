@@ -322,3 +322,7 @@ body { font-family: 'Special Elite', monospace; background: #e8dcc8; height: 100
   background: #fff !important;
   transition: background 0.5s;
 }
+/* 🔥 СКРЫВАЕМ ФОРМУ ВО ВРЕМЯ ТЕРМИНАЛА */
+.auth-screen.hidden-during-terminal {
+  display: none !important;
+}

@@ -357,9 +357,18 @@ function renderMessage(data, key, chatId) {
   let content = data.type === 'image' 
     ? `<img src="${data.image}" class="photo-preview" onclick="openPhoto('${data.image}','${data.author}','${time}')">` 
     : '<div class="msg-text"></div>';
-    
+    // Если это ответ на другое сообщение — покажи контекст
+  let replyContext = '';
+  if (data.replyTo) {
+    replyContext = `
+      <div class="reply-context" onclick="scrollToMessage('${data.replyTo.key}')">
+        <span class="reply-context-author">@${data.replyTo.author}:</span> 
+        <span class="reply-context-text">${data.replyTo.text}</span>
+      </div>
+    `;
+  }
   div.innerHTML = `
-    ${!isMe ? `<div class="msg-author">${data.author} ${delBtn}</div>` : `<div class="msg-head-right" style="text-align:right">${delBtn}</div>`}
+    ${!isMe ? `<div class="msg-author">${data.author} ${delBtn}${replyBtn}</div>` : `<div class="msg-head-right" style="text-align:right">${delBtn}${replyBtn}</div>`}
     ${content}
     <div class="msg-meta"><span>${time}</span></div>
   `;

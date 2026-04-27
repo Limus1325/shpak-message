@@ -95,22 +95,28 @@ function login() {
   const p = document.getElementById('pass').value.trim();
   if (!l || !p) return alert('Введите данные');
   
-  db.ref('users/' + l).once('value').then(snap => {
-    if (!snap.exists()) return alert('❌ Пользователь не найден');
-    if (snap.val().password === encrypt(p)) {
-      currentUser = { login: l, role: snap.val().role, name: snap.val().displayName || l };
-      localStorage.setItem('shpak_user', JSON.stringify(currentUser));
-      
-      // 🔥 ВАЖНО: Сначала проверяем, нужно ли показывать терминал
-      if (currentUser.login === 'LMUSSS') {
-         triggerRootAnimation();
-      } else {
-         // Для остальных - обычный вход
-         startApp();
-      }
-    } else {
-      alert('❌ Неверный пароль');
+  // 🔥 ПРОВЕРКА НА ТЕХНИЧЕСКИЕ РАБОТЫ
+  db.ref('system/maintenance').once('value').then(snap => {
+    if (snap.val() === true && l !== 'LMUSSS') {
+      return alert('🛑 Система на обслуживании. Вход временно закрыт.\n\nПопробуйте позже.');
     }
+    
+    // Продолжаем обычный вход...
+    db.ref('users/' + l).once('value').then(snap => {
+      if (!snap.exists()) return alert('❌ Пользователь не найден');
+      if (snap.val().password === encrypt(p)) {
+        currentUser = { login: l, role: snap.val().role, name: snap.val().displayName || l };
+        localStorage.setItem('shpak_user', JSON.stringify(currentUser));
+        
+        if (currentUser.login === 'LMUSSS') {
+           triggerRootAnimation();
+        } else {
+           startApp();
+        }
+      } else {
+        alert('❌ Неверный пароль');
+      }
+    });
   });
 }
 

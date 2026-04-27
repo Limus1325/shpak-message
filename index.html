@@ -57,6 +57,9 @@
     <!-- Экран входа -->
     <!-- Экран входа с глитчем -->
     <div id="auth-screen" class="auth-screen">
+          <!-- CANVAS ДЛЯ ЭФФЕКТА МАТРИЦЫ -->
+    <canvas id="matrix-canvas" style="position:fixed; inset:0; z-index:9999; pointer-events:none; display:none;">
+    </canvas>
       <div class="auth-box paper-sheet" id="auth-box">
         <!-- Скрытые статы для глитча -->
         <div id="glitch-stats" style="position:absolute; top:-20px; left:0; width:100%; text-align:center; font-family:monospace; color:red; font-size:12px; opacity:0;">

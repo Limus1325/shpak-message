@@ -126,10 +126,10 @@ function triggerRootAnimation() {
   const bootScreen = document.getElementById('boot-screen');
   const canvas = document.getElementById('matrix-canvas');
   
-  // Элементы для искажения
-  const inputs = document.querySelectorAll('#auth-box input');
-  const btn = document.getElementById('btn-enter');
-  const title = document.getElementById('auth-title');
+// Элементы для искажения
+const inputs = document.querySelectorAll('#auth-box input');
+const btn = document.getElementById('btn-enter');
+const title = document.getElementById('auth-title');
 
   if (!box || !screen || !canvas) return;
 

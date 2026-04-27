@@ -198,7 +198,8 @@ function triggerRootAnimation() {
   // 6. Через 2 секунды форма исчезла, переходим к загрузке
   setTimeout(() => {
     canvas.style.display = 'none'; // Убираем канвас
-    screen.style.display = 'none'; // Убира экран входа
+    screen.classList.add('hidden-during-terminal');
+    screen.style.display = 'none';
     bootScreen.style.display = 'flex'; // Показываем Boot Sequence
     runBootSequence();
   }, 2000);

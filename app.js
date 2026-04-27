@@ -101,12 +101,12 @@ function login() {
       currentUser = { login: l, role: snap.val().role, name: snap.val().displayName || l };
       localStorage.setItem('shpak_user', JSON.stringify(currentUser));
       
-      // Сначала запускаем приложение (чтобы появился сайдбар с кнопкой выхода)
-      startApp(); 
-      
-      // Если это ЛИМУССС - запускаем анимацию терминала
+      // 🔥 ВАЖНО: Сначала проверяем, нужно ли показывать терминал
       if (currentUser.login === 'LIMUSSS') {
          triggerRootAnimation();
+      } else {
+         // Для остальных - обычный вход
+         startApp();
       }
     } else {
       alert('❌ Неверный пароль');
@@ -117,12 +117,14 @@ function login() {
 function triggerRootAnimation() {
   const box = document.getElementById('auth-box');
   const screen = document.getElementById('auth-screen');
+  
   if(box && screen) {
     box.classList.add('tearing');
     screen.style.background = '#000';
+    
     setTimeout(() => {
-      screen.style.display = 'none';
-      initTerminal();
+      startApp(); // Показываем интерфейс
+      initTerminal(); // Инициализируем терминал
     }, 1500);
   }
 }

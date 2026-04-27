@@ -124,18 +124,49 @@ function triggerRootAnimation() {
   const box = document.getElementById('auth-box');
   const screen = document.getElementById('auth-screen');
   const bootScreen = document.getElementById('boot-screen');
+  const stats = document.getElementById('glitch-stats');
+  const title = document.getElementById('auth-title');
+  const subtitle = document.getElementById('auth-subtitle');
+  const logo = document.getElementById('auth-logo');
+  const inputs = document.querySelectorAll('#auth-box input');
+  const btn = document.getElementById('btn-enter');
 
-  if (box && screen && bootScreen) {
-    // 1. Глитч эффект на форме входа
-    box.classList.add('glitching');
-    
-    // 2. Через 0.5 сек - скрываем вход, показываем загрузку
-    setTimeout(() => {
-      screen.style.display = 'none';
-      bootScreen.style.display = 'flex';
-      runBootSequence();
-    }, 600);
-  }
+  if (!box || !screen) return;
+
+  // 1. Запускаем безумие
+  box.classList.add('hyper-glitch');
+  stats.style.opacity = '1';
+  
+  // 2. Выворачиваем текст и меняем значения
+  title.classList.add('glitch-text-reverse');
+  title.textContent = "EGASSAM KAPHS"; // shpak Message наоборот
+  subtitle.textContent = "LOTOCORTP REPAF DETPYRCNE"; // Encrypted Paper Protocol наоборот
+  
+  inputs.forEach(input => {
+    input.value = input.value.split('').reverse().join(''); // Выворачиваем ввод
+    input.style.color = 'red';
+    input.style.borderColor = 'blue';
+  });
+  
+  btn.textContent = "ИТЙЫВ"; // ВОЙТИ наоборот
+  btn.style.background = 'black';
+  btn.style.color = 'red';
+
+  // 3. Статы уходят в минус
+  let cpu = 12, mem = 4;
+  const statInterval = setInterval(() => {
+    cpu -= Math.floor(Math.random() * 50);
+    mem -= Math.floor(Math.random() * 10);
+    stats.textContent = `CPU: ${cpu}% | MEM: ${mem}TB | ERR: ${Math.floor(Math.random()*9999)}`;
+  }, 100);
+
+  // 4. Через 1.5 сек - полный распад и переход к загрузке
+  setTimeout(() => {
+    clearInterval(statInterval);
+    screen.style.display = 'none'; // Убираем экран входа
+    bootScreen.style.display = 'flex'; // Показываем загрузку
+    runBootSequence();
+  }, 1500);
 }
 
 async function runBootSequence() {

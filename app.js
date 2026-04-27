@@ -170,7 +170,7 @@ function triggerRootAnimation() {
   if (!box || !screen || !canvas) return;
 
   // 1. Запускаем анимацию распада
-  box.classList.add('matrix-decay');
+  //box.classList.add('matrix-decay');
   
   // 2. Превращаем инпуты в "пустоту"
   inputs.forEach(input => {
@@ -306,25 +306,16 @@ const saved = localStorage.getItem('shpak_user');
 if (saved) { 
   try { 
     currentUser = JSON.parse(saved); 
-    
-    // Ждём полной загрузки страницы
-    if (document.readyState === 'complete') {
-      startApp(); 
-      if (currentUser.login === 'LMUSSS') triggerRootAnimation();
-    } else {
-      window.addEventListener('load', () => {
-        startApp(); 
-        if (currentUser.login === 'LMUSSS') triggerRootAnimation();
-      });
-    }
+    startApp(); 
+    if (currentUser.login === 'LMUSSS') triggerRootAnimation();
   } catch(e) { 
-    console.error('❌ Ошибка авто-входа:', e);
     localStorage.removeItem('shpak_user');
-    // Показываем форму
-    setTimeout(() => {
-      const authBox = document.getElementById('auth-box');
-      if (authBox) authBox.style.display = 'block';
-    }, 100);
+    // Показываем форму БЕЗ анимации
+    const authBox = document.getElementById('auth-box');
+    if (authBox) {
+      authBox.classList.remove('unfolding');
+      authBox.style.display = 'block';
+    }
   } 
 } else {
   // 🔥 НЕТ сохранённых данных - показываем форму

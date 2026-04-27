@@ -124,49 +124,92 @@ function triggerRootAnimation() {
   const box = document.getElementById('auth-box');
   const screen = document.getElementById('auth-screen');
   const bootScreen = document.getElementById('boot-screen');
-  const stats = document.getElementById('glitch-stats');
-  const title = document.getElementById('auth-title');
-  const subtitle = document.getElementById('auth-subtitle');
-  const logo = document.getElementById('auth-logo');
+  const canvas = document.getElementById('matrix-canvas');
+  
+  // Элементы для искажения
   const inputs = document.querySelectorAll('#auth-box input');
   const btn = document.getElementById('btn-enter');
+  const title = document.getElementById('auth-title');
 
-  if (!box || !screen) return;
+  if (!box || !screen || !canvas) return;
 
-  // 1. Запускаем безумие
-  box.classList.add('hyper-glitch');
-  stats.style.opacity = '1';
+  // 1. Запускаем анимацию распада
+  box.classList.add('matrix-decay');
   
-  // 2. Выворачиваем текст и меняем значения
-  title.classList.add('glitch-text-reverse');
-  title.textContent = "EGASSAM KAPHS"; // shpak Message наоборот
-  subtitle.textContent = "LOTOCORTP REPAF DETPYRCNE"; // Encrypted Paper Protocol наоборот
-  
+  // 2. Превращаем инпуты в "пустоту"
   inputs.forEach(input => {
-    input.value = input.value.split('').reverse().join(''); // Выворачиваем ввод
-    input.style.color = 'red';
-    input.style.borderColor = 'blue';
+    input.classList.add('input-void');
+    input.value = ''; // Очищаем значение
+    input.placeholder = ''; // Убираем подсказку
   });
   
-  btn.textContent = "ИТЙЫВ"; // ВОЙТИ наоборот
-  btn.style.background = 'black';
-  btn.style.color = 'red';
+  // 3. Кнопка превращается в код
+  btn.textContent = "010101";
+  btn.style.background = '#000';
+  btn.style.color = '#0f0';
+  btn.style.fontFamily = 'monospace';
+  btn.style.border = '1px solid #0f0';
 
-  // 3. Статы уходят в минус
-  let cpu = 12, mem = 4;
-  const statInterval = setInterval(() => {
-    cpu -= Math.floor(Math.random() * 50);
-    mem -= Math.floor(Math.random() * 10);
-    stats.textContent = `CPU: ${cpu}% | MEM: ${mem}TB | ERR: ${Math.floor(Math.random()*9999)}`;
-  }, 100);
+  // 4. Заголовок меняется на системный код
+  title.textContent = "SYSTEM_HALT";
+  title.style.color = '#f00';
+  title.style.fontFamily = 'monospace';
 
-  // 4. Через 1.5 сек - полный распад и переход к загрузке
+  // 5. Запускаем дождь из кода Матрицы НА ФОРМЕ
+  canvas.style.display = 'block';
+  startMatrixRain(canvas);
+
+  // 6. Через 2 секунды форма исчезла, переходим к загрузке
   setTimeout(() => {
-    clearInterval(statInterval);
-    screen.style.display = 'none'; // Убираем экран входа
-    bootScreen.style.display = 'flex'; // Показываем загрузку
+    canvas.style.display = 'none'; // Убираем канвас
+    screen.style.display = 'none'; // Убира экран входа
+    bootScreen.style.display = 'flex'; // Показываем Boot Sequence
     runBootSequence();
-  }, 1500);
+  }, 2000);
+}
+
+// Функция дождя из кода Матрицы
+function startMatrixRain(canvas) {
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  const katakana = 'アァカサタナハマヤャラワガザダバパイィキシチニヒミリヰギジヂビピウゥクスツヌフムユュルグズブヅプエェケセテネヘメレヱゲゼデベペオォコソトノホモヨョロヲゴゾドボポヴッン';
+  const latin = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  const nums = '01';
+  const alphabet = katakana + latin + nums;
+
+  const fontSize = 16;
+  const columns = canvas.width / fontSize;
+  const drops = [];
+
+  for (let x = 0; x < columns; x++) {
+    drops[x] = 1;
+  }
+
+  const draw = () => {
+    // Полупрозрачный чёрный фон для следа
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = '#0F0'; // Зелёный текст
+    ctx.font = fontSize + 'px monospace';
+
+    for (let i = 0; i < drops.length; i++) {
+      const text = alphabet.charAt(Math.floor(Math.random() * alphabet.length));
+      ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+      if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+        drops[i] = 0;
+      }
+      drops[i]++;
+    }
+  };
+
+  const interval = setInterval(draw, 33);
+
+  // Останавливаем анимацию через 2 сек, когда форма исчезнет
+  setTimeout(() => clearInterval(interval), 2000);
 }
 
 async function runBootSequence() {

@@ -55,13 +55,21 @@
     </div>
 
     <!-- Экран входа -->
+    <!-- Экран входа с глитчем -->
     <div id="auth-screen" class="auth-screen">
       <div class="auth-box paper-sheet" id="auth-box">
-        <div class="auth-logo">✈️</div>
-        <h1>shpak Message</h1>
-        <p class="auth-subtitle">Encrypted Paper Protocol</p>
+        <!-- Скрытые статы для глитча -->
+        <div id="glitch-stats" style="position:absolute; top:-20px; left:0; width:100%; text-align:center; font-family:monospace; color:red; font-size:12px; opacity:0;">
+          CPU: -400% | MEM: -99TB | NET: CORRUPTED
+        </div>
+
+        <div class="auth-logo" id="auth-logo">✈️</div>
+        <h1 id="auth-title">shpak Message</h1>
+        <p class="auth-subtitle" id="auth-subtitle">Encrypted Paper Protocol</p>
+        
         <input id="login" placeholder="Логин">
         <input id="pass" placeholder="Пароль" type="password">
+        
         <button id="btn-enter" class="btn-primary">Войти</button>
       </div>
     </div>

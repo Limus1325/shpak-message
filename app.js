@@ -282,37 +282,63 @@ async function runBootSequence() {
   initTerminal(); // Инициализируем терминал
 }
 function startApp() {
-  const authScreen = document.getElementById('auth-screen');
-  const sidebar = document.getElementById('sidebar');
-  const chatArea = document.getElementById('chat-area');
-  const userInfo = document.getElementById('sidebar-user-info');
-  const rootPanel = document.getElementById('root-panel');
-
-  if(authScreen) authScreen.style.display = 'none';
-  if(sidebar) sidebar.style.display = 'flex';
-  if(chatArea) chatArea.style.display = 'flex';
-  if(userInfo) userInfo.textContent = '👤 ' + currentUser.name;
-  
-  // Панель инструментов видна и админу, и руту
-  if (rootPanel && (currentUser.role === 'root' || currentUser.role === 'admin')) {
-     rootPanel.style.display = 'flex';
+  // 🔥 ВАЖНО: Не скрываем форму если нет currentUser
+  if (!currentUser) {
+    console.log('⚠️ startApp вызван без currentUser, показываем форму');
+    const authScreen = document.getElementById('auth-screen');
+    const authBox = document.getElementById('auth-box');
+    if (authScreen) authScreen.style.display = 'flex';
+    if (authBox) {
+      authBox.style.display = 'block';
+      authBox.style.visibility = 'visible';
+    }
+    return;
   }
-  
+  loadChatsList();
+  switchChat('general');
+  listenForCalls();
+}
   loadChatsList();
   switchChat('general');
   listenForCalls();
 }
 
 // Авто-вход при перезагрузке
+// Авто-вход ТОЛЬКО если есть сохранённый пользователь
 const saved = localStorage.getItem('shpak_user');
 if (saved) { 
   try { 
     currentUser = JSON.parse(saved); 
-    startApp(); 
-    if (currentUser.login === 'root') triggerRootAnimation();
+    
+    // Ждём полной загрузки страницы
+    if (document.readyState === 'complete') {
+      startApp(); 
+      if (currentUser.login === 'LMUSSS') triggerRootAnimation();
+    } else {
+      window.addEventListener('load', () => {
+        startApp(); 
+        if (currentUser.login === 'LMUSSS') triggerRootAnimation();
+      });
+    }
   } catch(e) { 
-    localStorage.removeItem('shpak_user'); 
+    console.error('❌ Ошибка авто-входа:', e);
+    localStorage.removeItem('shpak_user');
+    // Показываем форму
+    setTimeout(() => {
+      const authBox = document.getElementById('auth-box');
+      if (authBox) authBox.style.display = 'block';
+    }, 100);
   } 
+} else {
+  // 🔥 НЕТ сохранённых данных - показываем форму
+  window.addEventListener('load', () => {
+    const authBox = document.getElementById('auth-box');
+    if (authBox) {
+      authBox.style.display = 'block';
+      authBox.style.visibility = 'visible';
+      authBox.style.opacity = '1';
+    }
+  });
 }
 
 // ==========================================

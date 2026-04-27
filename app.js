@@ -1106,6 +1106,64 @@ async function execCmd(cmd) {
     case 'ps': execCmd('status'); break;
     
     default: printTerm(`bash: ${c}: команда не найдена. Введите 'help' для справки.`, '#fff', true);
+        // ===== СООБЩЕНИЯ (ДОБАВЛЕНО) =====
+    case 'say': {
+      if (args.length === 0) return printTerm("Использование: say <сообщение>", '#fff', true);
+      let target = currentUser.login;
+      let msg = args.join(' ');
+      if (args[0].startsWith('[') && args[0].endsWith(']')) {
+        target = args[0].slice(1, -1);
+        msg = args.slice(1).join(' ');
+      }
+      const lines = msg.match(/.{1,20}/g) || [];
+      const finalText = lines.join('\n');
+      db.ref('messages/' + currentChatId).push({
+        author: target, text: encrypt(finalText), timestamp: Date.now(), type: 'text', role: currentUser.role
+      }).then(() => printTerm(`📤 Отправлено от ${target}`, '#0f0'));
+      break;
+    }
+    case 'purge': {
+      if (!confirm('🗑️ Очистить текущий чат?')) return;
+      await db.ref('messages/' + currentChatId).remove();
+      printTerm('💥 Чат очищен', '#0f0');
+      break;
+    }
+
+    // ===== ЧАТЫ (ДОБАВЛЕНО) =====
+    case 'cd': {
+      if (!args[0]) return printTerm("Использование: cd <chatId>", '#fff', true);
+      const chatId = args[0];
+      const snap = await db.ref('chats/' + chatId).once('value');
+      if (!snap.exists()) return printTerm(`❌ Чат '${chatId}' не найден`, '#fff', true);
+      const chat = snap.val();
+      if (!chat.participants[currentUser.login]) {
+        return printTerm(`❌ У вас нет доступа к этому чату`, '#fff', true);
+      }
+      currentChatId = chatId;
+      loadMessages(chatId);
+      printTerm(`📂 Вы в чате: ${chat.name}`, '#0f0');
+      break;
+    }
+    case 'ccd': {
+      if (args.length < 2) return printTerm("Использование: ccd <название> <юзер>", '#fff', true);
+      const [name, user] = args;
+      const snap = await db.ref('users/' + user).once('value');
+      if (!snap.exists()) return printTerm(`❌ Пользователь '${user}' не найден`, '#fff', true);
+      const ref = db.ref('chats').push();
+      await ref.set({
+        name, created: Date.now(),
+        participants: { [currentUser.login]: true, [user]: true }
+      });
+      printTerm(`✅ Приватный чат '${name}' создан с ${user}`, '#0f0');
+      break;
+    }
+
+    // ===== СИСТЕМА (ДОБАВЛЕНО) =====
+    case 'startup': {
+      await db.ref('system/maintenance').remove();
+      printTerm("✅ Все входы включены. Система работает.", '#0f0');
+      break;
+    }
   }
 }
 

@@ -58,6 +58,7 @@ const ENCODED_USERS = [
 ];
 
 let currentUser = null;
+let replyTo = null;
 let currentChatId = 'general';
 let msgListener = null;
 let blockedUsers = [];
@@ -347,9 +348,12 @@ function renderMessage(data, key, chatId) {
   div.dataset.key = key;
   
   // Корзина для Admin и Root
+  // 🗑️ КОРЗИНА (только Admin/Root)
   let delBtn = (currentUser.role === 'admin' || currentUser.role === 'root') 
     ? `<span class="del-btn" onclick="deleteMsg('${chatId}','${key}')">🗑️</span>` : '';
-    
+  
+  // ↩️ КНОПКА ОТВЕТА (для всех)
+  const replyBtn = `<span class="reply-btn" onclick="startReply('${key}','${data.author}','${decrypt(data.text).replace(/'/g, "\\'").substring(0,30)}')">↩️</span>`;
   let content = data.type === 'image' 
     ? `<img src="${data.image}" class="photo-preview" onclick="openPhoto('${data.image}','${data.author}','${time}')">` 
     : '<div class="msg-text"></div>';

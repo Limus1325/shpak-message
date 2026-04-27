@@ -1162,7 +1162,10 @@ async function execCmd(cmd) {
     case 'clear': 
       document.getElementById('terminal-output').innerHTML = ''; 
       break;
-    case 'exit': logout(); break;
+    case 'exit': 
+    printTerm("👋 Завершение сессии...", '#0f0');
+    setTimeout(() => logout(), 300); // Небольшая задержка для эффекта
+    break;
     
     // ===== АЛИАСЫ =====
     case 'sudo': execCmd(args.join(' ')); break;

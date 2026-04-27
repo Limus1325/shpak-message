@@ -143,3 +143,66 @@ body { font-family: 'Special Elite', monospace; background: #e8dcc8; height: 100
   .back-btn { display: block !important; background: none; border: none; font-size: 24px; cursor: pointer; margin-right: 10px; color: var(--ink); }
 }
 .back-btn { display: none; }
+/* ===== CYBERPUNK BOOT SEQUENCE ===== */
+#boot-screen {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Fira Code', 'Courier New', monospace;
+  color: #0f0;
+}
+
+.boot-container {
+  width: 80%;
+  max-width: 800px;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.boot-line {
+  margin: 4px 0;
+  opacity: 0;
+  transform: translateX(-10px);
+  animation: bootFadeIn 0.2s forwards;
+}
+
+.boot-line.success { color: #0f0; }
+.boot-line.warn { color: #ffaa00; }
+.boot-line.error { color: #ff0000; }
+.boot-line.system { color: #00ffff; font-weight: bold; margin-top: 10px; }
+
+.boot-progress {
+  margin-top: 20px;
+  border: 1px solid #333;
+  padding: 3px;
+  display: none;
+}
+
+.boot-bar {
+  height: 10px;
+  background: #0f0;
+  width: 0%;
+  transition: width 0.1s linear;
+}
+
+@keyframes bootFadeIn {
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* Эффект глитча для логина */
+.auth-box.glitching {
+  animation: glitch-anim 0.3s infinite;
+}
+
+@keyframes glitch-anim {
+  0% { transform: translate(0); filter: hue-rotate(0deg); }
+  20% { transform: translate(-5px, 5px); filter: hue-rotate(90deg) blur(1px); }
+  40% { transform: translate(5px, -5px); filter: hue-rotate(180deg); }
+  60% { transform: translate(-2px, -2px); filter: hue-rotate(270deg) blur(2px); }
+  80% { transform: translate(2px, 2px); filter: hue-rotate(360deg); }
+  100% { transform: translate(0); filter: hue-rotate(0deg); }
+}

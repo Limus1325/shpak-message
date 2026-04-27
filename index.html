@@ -43,6 +43,16 @@
         </div>
       </div>
       <div class="messages-container" id="messages"></div>
+            <!-- Блок ответа (скрыт по умолчанию) -->
+      <div id="reply-preview" style="display:none; padding:8px 12px; background:#f0f0f0; border-left:3px solid var(--accent); margin-bottom:5px; font-size:13px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span id="reply-to-author" style="font-weight:bold; color:var(--accent);"></span>
+          <button id="cancel-reply" style="background:none; border:none; color:#888; cursor:pointer; font-size:16px;">✕</button>
+        </div>
+        <div id="reply-to-text" style="color:#666; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:300px;"></div>
+      </div>
+
+      <div class="message-input-area">
       <div class="message-input-area">
         <button class="attach-btn" onclick="triggerFile()">📎</button>
         <input id="msg-input" placeholder="Написать сообщение..." type="text" maxlength="200">

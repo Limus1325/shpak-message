@@ -65,6 +65,41 @@ let blockedUsers = [];
 
 // 🚪 ФУНКЦИЯ ВЫХОДА (ГЛОБАЛЬНАЯ)
 function logout() {
+  // Если мы в терминале - запускаем анимацию развёртки
+  if (currentUser?.login === 'LMUSSS' && document.getElementById('terminal-overlay')?.style.display !== 'none') {
+    const terminal = document.getElementById('terminal-overlay');
+    const screen = document.getElementById('auth-screen');
+    const box = document.getElementById('auth-box');
+    
+    if (terminal && screen && box) {
+      // 1. Скрываем терминал
+      terminal.style.display = 'none';
+      
+      // 2. Делаем экран белым
+      screen.classList.add('whiteout');
+      screen.style.display = 'flex';
+      
+      // 3. Показываем форму в "свёрнутом" состоянии
+      box.classList.add('unfolding');
+      box.style.display = 'block';
+      
+      // 4. Сбрасываем поля
+      document.getElementById('login').value = '';
+      document.getElementById('pass').value = '';
+      
+      // 5. Через 1.2 сек (конец анимации) - финальная настройка
+      setTimeout(() => {
+        box.classList.remove('unfolding');
+        screen.classList.remove('whiteout');
+        currentUser = null;
+        localStorage.removeItem('shpak_user');
+      }, 1200);
+      
+      return; // Выходим, чтобы не сработал обычный логаут
+    }
+  }
+  
+  // Обычный логаут для всех остальных
   localStorage.removeItem('shpak_user');
   location.reload();
 }

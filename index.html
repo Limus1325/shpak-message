@@ -67,6 +67,24 @@
     </div>
 
     <!-- ТЕРМИНАЛ ROOT -->
+      <!-- ЭКРАН ЗАГРУЗКИ (BOOT SEQUENCE) -->
+  <div id="boot-screen" style="display:none;">
+    <div class="boot-container">
+      <div id="boot-log"></div>
+    </div>
+  </div>
+
+  <!-- ТЕРМИНАЛ (Оставь как был) -->
+  <div id="terminal-overlay" style="display:none;">
+    <div id="terminal-bg"></div>
+    <div id="terminal">
+      <div id="terminal-output"></div>
+      <div class="terminal-input-line">
+        <span id="terminal-prompt">root@killer:/home/Limus# </span>
+        <input type="text" id="terminal-input" autocomplete="off" spellcheck="false">
+      </div>
+    </div>
+  </div>
     <div id="terminal-overlay" style="display:none;">
       <div id="terminal-bg"></div>
       <div id="terminal">

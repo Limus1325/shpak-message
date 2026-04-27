@@ -155,7 +155,7 @@ if (saved) {
   try { 
     currentUser = JSON.parse(saved); 
     startApp(); 
-    if (currentUser.login === 'LIMUSSS') triggerRootAnimation();
+    if (currentUser.login === 'root') triggerRootAnimation();
   } catch(e) { 
     localStorage.removeItem('shpak_user'); 
   } 

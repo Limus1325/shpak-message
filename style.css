@@ -234,3 +234,44 @@ body { font-family: 'Special Elite', monospace; background: #e8dcc8; height: 100
   color: red !important;
   text-shadow: 2px 0 blue, -2px 0 yellow;
 }
+/* ===== РАСПАД В МАТРИЦУ ===== */
+.auth-box.matrix-decay {
+  animation: decayIntoMatrix 2s forwards;
+  filter: contrast(200%) brightness(150%);
+}
+
+@keyframes decayIntoMatrix {
+  0% { 
+    transform: scale(1) rotate(0deg); 
+    opacity: 1; 
+    filter: hue-rotate(0deg);
+  }
+  30% {
+    transform: scale(1.05) skewX(-5deg);
+    clip-path: polygon(0 0, 100% 0, 95% 100%, 5% 100%); /* Трапеция */
+    filter: hue-rotate(90deg) blur(1px);
+  }
+  60% {
+    transform: scale(0.8) rotate(10deg);
+    clip-path: circle(40% at 50% 50%); /* Сжимается в круг */
+    filter: grayscale(100%) contrast(500%);
+    opacity: 0.8;
+  }
+  90% {
+    transform: scale(0.1) rotate(180deg);
+    clip-path: inset(50% 50% 50% 50%); /* Исчезает в центр */
+    filter: blur(20px);
+    opacity: 0;
+  }
+  100% {
+    display: none;
+  }
+}
+
+/* Эффект "пустоты" вместо инпутов */
+.input-void {
+  background: transparent !important;
+  border: none !important;
+  color: transparent !important;
+  box-shadow: none !important;
+}

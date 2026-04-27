@@ -5,6 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>shpak Message</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+  /* 🔥 ПРИНУДИТЕЛЬНО ПОКАЗЫВАЕМ ФОРМУ ПО УМОЛЧАНИЮ */
+  #auth-screen {
+    display: flex !important;
+  }
+  #auth-box {
+    display: block !important;
+    visibility: visible !important;
+  }
+  /* Скрываем остальное */
+  #sidebar, #chat-area, #terminal-overlay, #boot-screen {
+    display: none !important;
+  }
+</style>
 </head>
 <body>
   <div class="app-container" id="app-container">

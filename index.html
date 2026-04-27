@@ -7,14 +7,12 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="app-container">
+  <div class="app-container" id="app-container">
     <!-- Сайдбар -->
     <div class="sidebar" id="sidebar" style="display:none;">
       <div class="sidebar-header">
         <button class="menu-btn" onclick="toggleProfileMenu()">☰</button>
-        <div class="search-box">
-          <input type="text" placeholder="Поиск..." onclick="openSearch()">
-        </div>
+        <div class="search-box"><input type="text" placeholder="Поиск..." onclick="openSearch()"></div>
       </div>
       <div class="chat-list-header">
         <h3>Чаты</h3>
@@ -29,18 +27,9 @@
 
     <!-- Область чата -->
     <div class="chat-area" id="chat-area" style="display:none;">
-      <!-- GOD MODE PANEL -->
-      <div id="root-panel" style="display:none;">
-        <span>⚠️ GOD MODE: LIMUSSS</span>
-        <div>
-          <input type="text" id="force-input" placeholder="Force Sender">
-          <button onclick="showSystemInfo()">SYS</button>
-          <button onclick="forceClearDB()">NUKE</button>
-        </div>
-      </div>
-
       <div class="chat-header">
         <div class="chat-header-left">
+          <button class="back-btn" onclick="showChatList()">⬅️</button>
           <div class="chat-header-avatar">📄</div>
           <div class="chat-header-info">
             <div class="chat-header-name" id="chat-header-name">Загрузка...</div>
@@ -48,17 +37,16 @@
           </div>
         </div>
         <div class="chat-header-actions">
-          <button class="header-btn" onclick="startCall()" title="Позвонить">📞</button>
+          <button class="header-btn" onclick="startCall()">📞</button>
           <button class="header-btn" onclick="openSearch()">🔍</button>
           <button class="header-btn" onclick="toggleChatMenu()">⋮</button>
         </div>
       </div>
-      
       <div class="messages-container" id="messages"></div>
-      
       <div class="message-input-area">
         <button class="attach-btn" onclick="triggerFile()">📎</button>
-        <input id="msg-input" placeholder="Написать сообщение..." type="text">
+        <input id="msg-input" placeholder="Написать сообщение..." type="text" maxlength="200">
+        <span id="char-counter" style="font-size:12px; color:#888;">0/200</span>
         <button class="emoji-btn" onclick="toggleEmoji()">😊</button>
         <button id="btn-send" class="send-btn">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
@@ -68,7 +56,7 @@
 
     <!-- Экран входа -->
     <div id="auth-screen" class="auth-screen">
-      <div class="auth-box paper-sheet">
+      <div class="auth-box paper-sheet" id="auth-box">
         <div class="auth-logo">✈️</div>
         <h1>shpak Message</h1>
         <p class="auth-subtitle">Encrypted Paper Protocol</p>
@@ -77,15 +65,26 @@
         <button id="btn-enter" class="btn-primary">Войти</button>
       </div>
     </div>
+
+    <!-- ТЕРМИНАЛ ROOT -->
+    <div id="terminal-overlay" style="display:none;">
+      <div id="terminal-bg"></div>
+      <div id="terminal">
+        <div id="terminal-output"></div>
+        <div class="terminal-input-line">
+          <span id="terminal-prompt">root@killer:/home/Limus# </span>
+          <input type="text" id="terminal-input" autocomplete="off" spellcheck="false">
+        </div>
+      </div>
+    </div>
   </div>
 
-  <!-- Меню профиля (☰) -->
+  <!-- Меню профиля -->
   <div id="profile-menu" class="dropdown-menu" style="display:none;">
     <div class="menu-item" onclick="showProfile()">👤 Мой профиль</div>
     <div class="menu-item" onclick="logout()">🚪 Выйти</div>
   </div>
-
-  <!-- Меню чата (⋮) -->
+  <!-- Меню чата -->
   <div id="chat-menu" class="dropdown-menu" style="display:none;">
     <div class="menu-item" onclick="blockCurrentUser()">🚫 Заблокировать</div>
     <div class="menu-item" onclick="deleteCurrentChat()" style="color:red;">🗑️ Удалить чат</div>
@@ -105,6 +104,18 @@
     </div>
   </div>
 
+  <!-- Уведомление о звонке -->
+  <div id="incoming-call-toast" class="call-toast" style="display:none;">
+    <div class="toast-content">
+      <div class="toast-avatar">📞</div>
+      <div class="toast-info"><h3>Входящий звонок</h3><p id="caller-name">Неизвестный</p></div>
+      <div class="toast-actions">
+        <button class="toast-btn accept" onclick="acceptIncomingCall()">✅ Принять</button>
+        <button class="toast-btn reject" onclick="rejectIncomingCall()">❌ Отклонить</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Остальные модалки -->
   <div id="photo-modal" class="photo-modal" style="display:none;" onclick="closePhotoModal(event)">
     <div class="photo-modal-content" onclick="event.stopPropagation()">
@@ -112,7 +123,6 @@
       <img id="modal-img" src="" alt="Photo">
     </div>
   </div>
-
   <div id="search-overlay" class="search-overlay" style="display:none;">
     <div class="search-box-container">
       <input type="text" id="search-input" placeholder="Поиск..." oninput="handleSearch(this.value)">
@@ -120,14 +130,14 @@
     </div>
     <div id="search-results" class="search-results"></div>
   </div>
-
   <div id="emoji-picker" class="emoji-picker" style="display:none;">
     <div class="emoji-grid">
       <span onclick="insertEmoji('😀')">😀</span><span onclick="insertEmoji('😂')">😂</span>
-      <span onclick="insertEmoji('😍')">😍</span><span onclick="insertEmoji('🔥')"></span>
+      <span onclick="insertEmoji('😍')">😍</span><span onclick="insertEmoji('🔥')">🔥</span>
+      <span onclick="insertEmoji('✈️')">✈️</span><span onclick="insertEmoji('👑')">👑</span>
+      <span onclick="insertEmoji('👻')">👻</span><span onclick="insertEmoji('😼')">😼</span>
     </div>
   </div>
-
   <div id="new-chat-modal" class="modal-overlay" style="display:none;">
     <div class="modal-content paper-sheet">
       <h3>Новый чат</h3>
@@ -139,25 +149,10 @@
       </div>
     </div>
   </div>
-
   <input type="file" id="file-input" accept="image/*" style="display:none;" onchange="handleFile(event)">
   
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
   <script src="app.js"></script>
-  <!-- Уведомление о входящем звонке -->
-<div id="incoming-call-toast" class="call-toast" style="display:none;">
-  <div class="toast-content">
-    <div class="toast-avatar">📞</div>
-    <div class="toast-info">
-      <h3>Входящий звонок</h3>
-      <p id="caller-name">Неизвестный</p>
-    </div>
-    <div class="toast-actions">
-      <button class="toast-btn accept" onclick="acceptIncomingCall()">✅ Принять</button>
-      <button class="toast-btn reject" onclick="rejectIncomingCall()">❌ Отклонить</button>
-    </div>
-  </div>
-</div>
 </body>
 </html>

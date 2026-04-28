@@ -60,7 +60,7 @@ const ENCODED_USERS = [
   { l: 'TE1VU1NT', p: 'MjlJN28yMjBP', r: 'root', n: 'Kirill (Creator)' },
   { l: 'R0VORVJBTCBESVJFQ1RPUg==', p: 'YzVndjFhMm4zaTRhNQ==', r: 'admin', n: 'Vanya (Director)' },
   { l: '0KXQvtC80L7QvNC4', p: 'MDEyMzU=', r: 'user', n: 'Алексей' },
-  { l: '0JrQvtC80LXQvdC+0LvQvtGA0L7QvNC4', p: 'ODc2NQ==', r: 'user', n: 'Ковалёв' },
+  { l: '0JrQvtC80LXQvdC+0LvQvtGA0L7QvNC4', p: 'ODc2NQ==', r: 'user', n: 'Ковалев' },
   { l: 'Uk9C', p: 'Nzg5ODg=', r: 'user', n: 'ROB' },
   { l: '0JLQvtC80LXQvdC+0LvQvg==', p: 'MTcwMjIwMTQ=', r: 'user', n: 'Ваня' },
   { l: '0JDQvNC40YDQvtGA0L3QuNC5', p: 'ODgwMDM1NTM1', r: 'user', n: 'ОБСОС' }

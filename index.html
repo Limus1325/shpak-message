@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!<!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
@@ -8,6 +8,7 @@
 </head>
 <body>
   <div class="app-container" id="app-container">
+    <!-- Сайдбар -->
     <div class="sidebar" id="sidebar" style="display:none;">
       <div class="sidebar-header">
         <button class="menu-btn" onclick="toggleProfileMenu()">☰</button>
@@ -24,6 +25,7 @@
       </div>
     </div>
 
+    <!-- Область чата -->
     <div class="chat-area" id="chat-area" style="display:none;">
       <div class="chat-header">
         <div class="chat-header-left">
@@ -43,6 +45,7 @@
       
       <div class="messages-container" id="messages"></div>
       
+      <!-- Блок ответа -->
       <div id="reply-preview" style="display:none; padding:8px 12px; background:#f0f0f0; border-left:3px solid var(--accent); margin:5px 10px; font-size:13px;">
         <div style="display:flex; justify-content:space-between; align-items:center;">
           <span id="reply-to-author" style="font-weight:bold; color:var(--accent);"></span>
@@ -62,6 +65,7 @@
       </div>
     </div>
 
+    <!-- Экран входа -->
     <div id="auth-screen" class="auth-screen">
       <canvas id="matrix-canvas" style="position:fixed; inset:0; z-index:9999; pointer-events:none; display:none;"></canvas>
       
@@ -81,12 +85,14 @@
       </div>
     </div>
 
+    <!-- Экран загрузки -->
     <div id="boot-screen" style="display:none;">
       <div class="boot-container">
         <div id="boot-log"></div>
       </div>
     </div>
 
+    <!-- Терминал -->
     <div id="terminal-overlay" style="display:none;">
       <div id="terminal-bg"></div>
       <div id="terminal">
@@ -99,6 +105,7 @@
     </div>
   </div>
 
+  <!-- Меню -->
   <div id="profile-menu" class="dropdown-menu" style="display:none;">
     <div class="menu-item" onclick="showProfile()">👤 Мой профиль</div>
     <div class="menu-item" onclick="logout()">🚪 Выйти</div>
@@ -109,6 +116,7 @@
     <div class="menu-item" onclick="deleteCurrentChat()" style="color:red;">🗑️ Удалить чат</div>
   </div>
 
+  <!-- Звонки -->
   <div id="call-overlay" class="call-overlay" style="display:none;">
     <div class="call-box">
       <div class="call-avatar">📞</div>
@@ -133,6 +141,7 @@
     </div>
   </div>
 
+  <!-- Модалки -->
   <div id="photo-modal" class="photo-modal" style="display:none;" onclick="closePhotoModal(event)">
     <div class="photo-modal-content" onclick="event.stopPropagation()">
       <button class="close-btn" onclick="closePhotoModal()">✕</button>
@@ -152,8 +161,8 @@
     <div class="emoji-grid">
       <span onclick="insertEmoji('😀')">😀</span><span onclick="insertEmoji('😂')">😂</span>
       <span onclick="insertEmoji('😍')">😍</span><span onclick="insertEmoji('🔥')">🔥</span>
-      <span onclick="insertEmoji('✈️')">✈️</span><span onclick="insertEmoji('👑')">👑</span>
-      <span onclick="insertEmoji('👻')">👻</span><span onclick="insertEmoji('😼')">😼</span>
+      <span onclick="insertEmoji('✈️')">️</span><span onclick="insertEmoji('👑')">👑</span>
+      <span onclick="insertEmoji('👻')"></span><span onclick="insertEmoji('😼')">😼</span>
     </div>
   </div>
   
@@ -173,6 +182,7 @@
   
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-  <script src="app.js"></script>
+  <script src="app.js" defer></script>
 </body>
 </html>
+

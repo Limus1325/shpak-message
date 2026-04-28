@@ -205,7 +205,7 @@ async function runBootSequence() {
     { text: "Identity CONFIRMED.", class: "success" },
     { text: "Bypassing firewall restrictions...", class: "warn" },
     { text: "Root privileges: GRANTED", class: "system" },
-    { text: "Loading terminal interface...", class: "" }
+    { text: "Initializing ROOT TERMINAL...", class: "" } // Изменил текст
   ];
 
   for (let i = 0; i < lines.length; i++) {
@@ -217,16 +217,22 @@ async function runBootSequence() {
   }
 
   await new Promise(r => setTimeout(r, 1000));
+  
+  // Скрываем экран загрузки
   document.getElementById('boot-screen').style.display = 'none';
   
-  // Переключаемся на обычный интерфейс или открываем терминал
-  // По желанию можно сразу открыть терминал:
-  // document.getElementById('terminal-overlay').style.display = 'block';
-  // initTerminal();
-  
-  // Или показать интерфейс чата:
-  startApp();
+  // 🔥 ВАЖНО: Сразу открываем ТЕРМИНАЛ, а не startApp()
+  const terminalOverlay = document.getElementById('terminal-overlay');
+  if (terminalOverlay) {
+    terminalOverlay.style.display = 'block';
+    initTerminal(); // Запускаем логику терминала
+  } else {
+    // Если вдруг терминала нет, fallback на обычный интерфейс
+    startApp();
+  }
 }
+
+
 
 function startApp() {
   if (!currentUser) return;

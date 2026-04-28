@@ -442,15 +442,8 @@ function sendMessage() {
   let text = input.value.trim();
   if (!text) return;
   
-  // 🔥 Если это команда /term и пользователь root
-  if (text === '/term' && currentUser.role === 'root') {
-    document.getElementById('sidebar').style.display = 'none';
-    document.getElementById('chat-area').style.display = 'none';
-    document.getElementById('terminal-overlay').style.display = 'block';
-    initTerminal();
-    input.value = '';
-    return;
-  }
+  //
+
   if (!currentUser || !currentChatId) return;
   const input = document.getElementById('msg-input');
   let text = input.value.trim();

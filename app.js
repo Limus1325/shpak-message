@@ -185,3 +185,6 @@ function loadChat() {
 
 // Запуск
 checkSession();
+function checkSession() {
+  // Проверка сессии (если нужно)
+}

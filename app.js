@@ -1,4 +1,4 @@
-// ?? FIREBASE CONFIG (твои ключи!)
+// ?? FIREBASE CONFIG
 const firebaseConfig = {
   apiKey: "AIzaSyCCTgHTXjKC3Q0x3YRZtR6cikE-p2FoQ_0",
   authDomain: "shpak-message.firebaseapp.com",
@@ -8,52 +8,9 @@ const firebaseConfig = {
   messagingSenderId: "302522413165",
   appId: "1:302522413165:web:cbd2d65395c58289680f64"
 };
-
-// Инициализация
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// ?? БЕЗОПАСНЫЙ двойной шифр Цезаря (только буквы и цифры)
-function caesarDoubleEncrypt(text, s1 = 1, s2 = 2) {
-  if (!text) return "";
-  
-  const totalShift = s1 + s2;
-  let result = "";
-  
-  for (let i = 0; i < text.length; i++) {
-    const char = text[i];
-    const code = char.charCodeAt(0);
-    
-    // Латиница A-Z, a-z
-    if (code >= 65 && code <= 90) {
-      result += String.fromCharCode(((code - 65 + totalShift) % 26) + 65);
-    }
-    else if (code >= 97 && code <= 122) {
-      result += String.fromCharCode(((code - 97 + totalShift) % 26) + 97);
-    }
-    // Кириллица А-Я, а-я (включая Ё)
-    else if (code >= 1040 && code <= 1071) {
-      result += String.fromCharCode(((code - 1040 + totalShift) % 32) + 1040);
-    }
-    else if (code >= 1072 && code <= 1103) {
-      result += String.fromCharCode(((code - 1072 + totalShift) % 32) + 1072);
-    }
-    else if (code === 1025) { // Ё
-      result += String.fromCharCode(((0 + totalShift) % 32) + 1040);
-    }
-    else if (code === 1105) { // ё
-      result += String.fromCharCode(((0 + totalShift) % 32) + 1072);
-    }
-    // Цифры 0-9
-    else if (code >= 48 && code <= 57) {
-      result += String.fromCharCode(((code - 48 + totalShift) % 10) + 48);
-    }
-    // Остальные символы оставляем как есть
-    else {
-      result += char;
-    }
-  }
-  return result;
 // ?? ЭЛЕМЕНТЫ
 const authScreen = document.getElementById('auth-screen');
 const chatScreen = document.getElementById('chat-screen');
@@ -64,17 +21,70 @@ const messagesDiv = document.getElementById('messages');
 
 let currentUser = null;
 
-// ?? ПРОВЕРКА СЕССИИ
-function checkSession() {
-	// ?? СОЗДАЁМ ТЕСТОВЫЙ АККАУНТ (TEST / 12345)
+// ?? ДВОЙНОЙ ШИФР ЦЕЗАРЯ
+function caesarDoubleEncrypt(text, s1 = 1, s2 = 2) {
+  if (!text) return "";
+  const totalShift = s1 + s2;
+  let result = "";
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const code = char.charCodeAt(0);
+    if (code >= 65 && code <= 90) {
+      result += String.fromCharCode(((code - 65 + totalShift) % 26) + 65);
+    } else if (code >= 97 && code <= 122) {
+      result += String.fromCharCode(((code - 97 + totalShift) % 26) + 97);
+    } else if (code >= 1040 && code <= 1071) {
+      result += String.fromCharCode(((code - 1040 + totalShift) % 32) + 1040);
+    } else if (code >= 1072 && code <= 1103) {
+      result += String.fromCharCode(((code - 1072 + totalShift) % 32) + 1072);
+    } else if (code === 1025) {
+      result += String.fromCharCode(((0 + totalShift) % 32) + 1040);
+    } else if (code === 1105) {
+      result += String.fromCharCode(((0 + totalShift) % 32) + 1072);
+    } else if (code >= 48 && code <= 57) {
+      result += String.fromCharCode(((code - 48 + totalShift) % 10) + 48);
+    } else {
+      result += char;
+    }
+  }
+  return result;
+} // 🔥 ЗАКРЫВАЮЩАЯ СКОБКА ФУНКЦИИ
+
+// ?? ДЕШИФРАТОР (ОБРАТНЫЙ)
+function caesarDoubleDecrypt(text, s1 = 1, s2 = 2) {
+  if (!text) return "";
+  const totalShift = s1 + s2;
+  let result = "";
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const code = char.charCodeAt(0);
+    if (code >= 65 && code <= 90) {
+      result += String.fromCharCode(((code - 65 - totalShift + 26) % 26) + 65);
+    } else if (code >= 97 && code <= 122) {
+      result += String.fromCharCode(((code - 97 - totalShift + 26) % 26) + 97);
+    } else if (code >= 1040 && code <= 1071) {
+      result += String.fromCharCode(((code - 1040 - totalShift + 32) % 32) + 1040);
+    } else if (code >= 1072 && code <= 1103) {
+      result += String.fromCharCode(((code - 1072 - totalShift + 32) % 32) + 1072);
+    } else if (code === 1025) {
+      result += String.fromCharCode(((0 - totalShift + 32) % 32) + 1040);
+    } else if (code === 1105) {
+      result += String.fromCharCode(((0 - totalShift + 32) % 32) + 1072);
+    } else if (code >= 48 && code <= 57) {
+      result += String.fromCharCode(((code - 48 - totalShift + 10) % 10) + 48);
+    } else {
+      result += char;
+    }
+  }
+  return result;
+}
+
+// ?? СОЗДАЁМ ТЕСТОВЫЙ АККАУНТ
 function createTestAccount() {
   const testLogin = 'TEST';
   const testPass = '12345';
-  
   const encLogin = caesarDoubleEncrypt(testLogin);
   const encPass = caesarDoubleEncrypt(testPass);
-  
-  // Проверяем и создаём тестовый аккаунт
   db.ref('users/' + encLogin).once('value').then(snap => {
     if (!snap.exists()) {
       db.ref('users/' + encLogin).set({
@@ -83,15 +93,14 @@ function createTestAccount() {
         isDirector: false,
         isTest: true,
         username: 'TEST'
-      }).then(() => {
-        console.log('? Тестовый аккаунт создан: TEST / 12345');
       });
     }
   });
 }
-
-// Вызываем при запуске
 createTestAccount();
+
+// ?? ПРОВЕРКА СЕССИИ
+function checkSession() {
   const session = localStorage.getItem('shpak_user');
   if (session) {
     currentUser = session;
@@ -106,19 +115,17 @@ document.getElementById('btn-reg').onclick = () => {
   const login = loginInput.value.trim();
   const pass = passInput.value.trim();
   if (!login || !pass) return alert('Заполни логин и пароль!');
-  
   const encLogin = caesarDoubleEncrypt(login);
   const encPass = caesarDoubleEncrypt(pass);
-  
   db.ref('users/' + encLogin).set({ 
     password: encPass, 
     created: Date.now(),
-    isDirector: login.toLowerCase() === 'ваня' // Ваня = директор ??
+    isDirector: login.toLowerCase() === 'ваня'
   }).then(() => {
-    alert('? Аккаунт создан! Теперь войди.');
+    alert('✅ Аккаунт создан! Теперь войди.');
     loginInput.value = '';
     passInput.value = '';
-  }).catch(e => alert('? Ошибка: ' + e.message));
+  }).catch(e => alert('❌ Ошибка: ' + e.message));
 };
 
 // ?? ВХОД
@@ -127,9 +134,8 @@ document.getElementById('btn-enter').onclick = () => {
   const pass = passInput.value.trim();
   const encLogin = caesarDoubleEncrypt(login);
   const encPass = caesarDoubleEncrypt(pass);
-  
   db.ref('users/' + encLogin).once('value').then(snap => {
-    if (!snap.exists()) return alert('? Пользователь не найден');
+    if (!snap.exists()) return alert('❌ Пользователь не найден');
     if (snap.val().password === encPass) {
       currentUser = login;
       localStorage.setItem('shpak_user', login);
@@ -137,7 +143,7 @@ document.getElementById('btn-enter').onclick = () => {
       chatScreen.style.display = 'block';
       loadChat();
     } else {
-      alert('? Неверный пароль');
+      alert('❌ Неверный пароль');
     }
   });
 };
@@ -155,7 +161,6 @@ msgInput.addEventListener('keypress', e => { if (e.key === 'Enter') sendMessage(
 function sendMessage() {
   const text = msgInput.value.trim();
   if (!text || !currentUser) return;
-  
   const encText = caesarDoubleEncrypt(text);
   db.ref('messages').push({
     author: currentUser,
@@ -174,7 +179,7 @@ function loadChat() {
     const el = document.createElement('div');
     el.className = 'message';
     if (data.isDirector) {
-      el.innerHTML = `<strong style="color:#ff6b6b">?? ${data.author}:</strong> ${decText}`;
+      el.innerHTML = `<strong style="color:#ff6b6b">👑 ${data.author}:</strong> ${decText}`;
     } else {
       el.innerHTML = `<strong>${data.author}:</strong> ${decText}`;
     }
@@ -185,6 +190,3 @@ function loadChat() {
 
 // Запуск
 checkSession();
-function checkSession() {
-  // Проверка сессии (если нужно)
-}

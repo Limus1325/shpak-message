@@ -925,36 +925,41 @@ async function execCmd(cmd) {
 
     // ===== 1-15: ПОЛЬЗОВАТЕЛИ =====
     case 'useradd': {
-      if (args.length < 2) return printTerm("Использование: useradd <логин> <пароль>", '#fff', true);
+      if (args.length < 2) return printTerm("Используй: useradd <логин> <пароль>", '#fff', true);
       const [login, pass] = args;
-      await db.ref('users/' + login).set({ password: encrypt(pass), role: 'user', displayName: login, created: Date.now() });
+      await db.ref('users/' + login).set({
+        password: encrypt(pass),
+        role: 'user',
+        displayName: login,
+        created: Date.now()
+      });
       printTerm(`✅ Пользователь '${login}' создан`, '#0f0');
       break;
     }
     case 'userdel': {
-      if (!args[0]) return printTerm("Использование: userdel <логин>", '#fff', true);
+      if (!args[0]) return printTerm("Используй: userdel <логин>", '#fff', true);
       await db.ref('users/' + args[0]).remove();
       printTerm(`🗑️ Пользователь '${args[0]}' удалён`, '#f00');
       break;
     }
     case 'usermod': {
-      if (args.length < 2) return printTerm("Использование: usermod <логин> <роль>", '#fff', true);
+      if (args.length < 2) return printTerm("Используй: usermod <логин> <роль>", '#fff', true);
       const [login, role] = args;
-      if (!['root', 'admin', 'user'].includes(role)) return printTerm("Неверная роль", '#fff', true);
+      if (!['root', 'admin', 'user'].includes(role)) return printTerm("Роль: root/admin/user", '#fff', true);
       await db.ref('users/' + login + '/role').set(role);
-      printTerm(`✅ Роль '${login}' изменена на ${role}`, '#0f0');
+      printTerm(`✅ Роль '${login}' = ${role}`, '#0f0');
       break;
     }
     case 'passwd': {
-      if (args.length < 2) return printTerm("Использование: passwd <логин> <пароль>", '#fff', true);
+      if (args.length < 2) return printTerm("Используй: passwd <логин> <пароль>", '#fff', true);
       await db.ref('users/' + args[0] + '/password').set(encrypt(args[1]));
       printTerm(`✅ Пароль изменён`, '#0f0');
       break;
     }
     case 'whois': {
-      if (!args[0]) return printTerm("Использование: whois <логин>", '#fff', true);
+      if (!args[0]) return printTerm("Используй: whois <логин>", '#fff', true);
       const snap = await db.ref('users/' + args[0]).once('value');
-      if (!snap.exists()) return printTerm("Не найден", '#fff', true);
+      if (!snap.exists()) return printTerm("❌ Не найден", '#fff', true);
       const d = snap.val();
       printTerm(`\n👤 ${args[0]}\n   Роль: ${d.role}\n   Имя: ${d.displayName}\n   Создан: ${new Date(d.created).toLocaleString()}`, '#0f0');
       break;
@@ -967,31 +972,31 @@ async function execCmd(cmd) {
       break;
     }
     case 'ban': {
-      if (!args[0]) return printTerm("Использование: ban <логин>", '#fff', true);
+      if (!args[0]) return printTerm("Используй: ban <логин>", '#fff', true);
       await db.ref('blocked/' + args[0]).set({ by: currentUser.login, at: Date.now() });
       printTerm(`🚫 '${args[0]}' забанен`, '#f00');
       break;
     }
     case 'unban': {
-      if (!args[0]) return printTerm("Использование: unban <логин>", '#fff', true);
+      if (!args[0]) return printTerm("Используй: unban <логин>", '#fff', true);
       await db.ref('blocked/' + args[0]).remove();
       printTerm(`✅ '${args[0]}' разбанен`, '#0f0');
       break;
     }
     case 'grant': {
-      if (args.length < 2) return printTerm("Использование: grant <юзер> <право>", '#fff', true);
+      if (args.length < 2) return printTerm("Используй: grant <юзер> <право>", '#fff', true);
       await db.ref('permissions/' + args[0] + '/' + args[1]).set(true);
       printTerm(`✅ Право '${args[1]}' выдано`, '#0f0');
       break;
     }
     case 'revoke': {
-      if (args.length < 2) return printTerm("Использование: revoke <юзер> <право>", '#fff', true);
+      if (args.length < 2) return printTerm("Используй: revoke <юзер> <право>", '#fff', true);
       await db.ref('permissions/' + args[0] + '/' + args[1]).remove();
       printTerm(`❌ Право '${args[1]}' отозвано`, '#0f0');
       break;
     }
     case 'spy': {
-      if (!args[0]) return printTerm("Использование: spy <юзер>", '#fff', true);
+      if (!args[0]) return printTerm("Используй: spy <юзер>", '#fff', true);
       printTerm(`👁️ Слежка за ${args[0]}...`, '#0f0');
       db.ref('messages').orderByChild('author').equalTo(args[0]).limitToLast(10).on('child_added', snap => {
         printTerm(`[${snap.val().author}]: ${decrypt(snap.val().text)}`, '#ff0');
@@ -1004,15 +1009,14 @@ async function execCmd(cmd) {
       break;
     }
     case 'audit': {
-      printTerm("🔍 Проверка...", '#0f0');
       const users = await db.ref('users').once('value');
       let r=0, a=0;
       users.forEach(u => { if(u.val().role==='root') r++; if(u.val().role==='admin') a++; });
-      printTerm(`   Всего: ${Object.keys(users.val()||{}).length}\n   Root: ${r}\n   Admin: ${a}`, '#0f0');
+      printTerm(`\n🔍 Аудит:\n   Всего: ${Object.keys(users.val()||{}).length}\n   Root: ${r}\n   Admin: ${a}`, '#0f0');
       break;
     }
     case 'permissions': {
-      if (!args[0]) return printTerm("Использование: permissions <юзер>", '#fff', true);
+      if (!args[0]) return printTerm("Используй: permissions <юзер>", '#fff', true);
       const snap = await db.ref('permissions/' + args[0]).once('value');
       const perms = snap.val() || {};
       printTerm(`\n🔑 Права ${args[0]}:`, '#0f0');
@@ -1020,22 +1024,28 @@ async function execCmd(cmd) {
       break;
     }
     case 'createbot': {
-      if (!args[0]) return printTerm("Использование: createbot <name>", '#fff', true);
-      await db.ref('users/' + args[0]).set({ password: encrypt('bot'+Date.now()), role: 'bot', displayName: args[0], isBot: true, created: Date.now() });
+      if (!args[0]) return printTerm("Используй: createbot <name>", '#fff', true);
+      await db.ref('users/' + args[0]).set({ 
+        password: encrypt('bot'+Date.now()), 
+        role: 'bot', 
+        displayName: args[0], 
+        isBot: true, 
+        created: Date.now() 
+      });
       printTerm(`✅ Бот '${args[0]}' создан`, '#0f0');
       break;
     }
 
     // ===== 16-30: ЧАТЫ =====
     case 'chatdel': {
-      if (!args[0]) return printTerm("Использование: chatdel <chatId>", '#fff', true);
+      if (!args[0]) return printTerm("Используй: chatdel <chatId>", '#fff', true);
       await db.ref('chats/' + args[0]).remove();
       await db.ref('messages/' + args[0]).remove();
       printTerm(`🗑️ Чат '${args[0]}' удалён`, '#f00');
       break;
     }
     case 'chatadd': {
-      if (args.length < 2) return printTerm("Использование: chatadd <name> <user1,user2,...>", '#fff', true);
+      if (args.length < 2) return printTerm("Используй: chatadd <name> <user1,user2>", '#fff', true);
       const name = args[0];
       const users = args[1].split(',');
       const parts = {};
@@ -1046,9 +1056,9 @@ async function execCmd(cmd) {
       break;
     }
     case 'chatinfo': {
-      if (!args[0]) return printTerm("Использование: chatinfo <chatId>", '#fff', true);
+      if (!args[0]) return printTerm("Используй: chatinfo <chatId>", '#fff', true);
       const snap = await db.ref('chats/' + args[0]).once('value');
-      if (!snap.exists()) return printTerm("Не найден", '#fff', true);
+      if (!snap.exists()) return printTerm("❌ Не найден", '#fff', true);
       const d = snap.val();
       printTerm(`\n📄 ${d.name}\n   ID: ${args[0]}\n   Создан: ${new Date(d.created).toLocaleString()}\n   Участников: ${Object.keys(d.participants).length}`, '#0f0');
       break;
@@ -1061,16 +1071,16 @@ async function execCmd(cmd) {
       break;
     }
     case 'cd': {
-      if (!args[0]) return printTerm("Использование: cd <chatId>", '#fff', true);
+      if (!args[0]) return printTerm("Используй: cd <chatId>", '#fff', true);
       const snap = await db.ref('chats/' + args[0]).once('value');
-      if (!snap.exists()) return printTerm("Не найден", '#fff', true);
+      if (!snap.exists()) return printTerm("❌ Не найден", '#fff', true);
       currentChatId = args[0];
       loadMessages(currentChatId);
       printTerm(`📂 Вы в чате: ${snap.val().name}`, '#0f0');
       break;
     }
     case 'ccd': {
-      if (args.length < 2) return printTerm("Использование: ccd <name> <user>", '#fff', true);
+      if (args.length < 2) return printTerm("Используй: ccd <name> <user>", '#fff', true);
       const [name, user] = args;
       const ref = await db.ref('chats').push();
       await ref.set({ name, created: Date.now(), participants: { [currentUser.login]: true, [user]: true } });
@@ -1078,32 +1088,32 @@ async function execCmd(cmd) {
       break;
     }
     case 'renamechat': {
-      if (!args[0]) return printTerm("Использование: renamechat <newname>", '#fff', true);
+      if (!args[0]) return printTerm("Используй: renamechat <newname>", '#fff', true);
       await db.ref('chats/' + currentChatId + '/name').set(args[0]);
       printTerm(`✅ Чат переименован в '${args[0]}'`, '#0f0');
       break;
     }
     case 'adduser': {
-      if (args.length < 2) return printTerm("Использование: adduser <chat> <user>", '#fff', true);
+      if (args.length < 2) return printTerm("Используй: adduser <chat> <user>", '#fff', true);
       await db.ref('chats/' + args[0] + '/participants/' + args[1]).set(true);
       printTerm(`✅ ${args[1]} добавлен в чат`, '#0f0');
       break;
     }
     case 'kickuser': {
-      if (args.length < 2) return printTerm("Использование: kickuser <chat> <user>", '#fff', true);
+      if (args.length < 2) return printTerm("Используй: kickuser <chat> <user>", '#fff', true);
       await db.ref('chats/' + args[0] + '/participants/' + args[1]).remove();
       printTerm(`👢 ${args[1]} кикнут`, '#0f0');
       break;
     }
     case 'chatmembers': {
-      if (!args[0]) return printTerm("Использование: chatmembers <chat>", '#fff', true);
+      if (!args[0]) return printTerm("Используй: chatmembers <chat>", '#fff', true);
       const snap = await db.ref('chats/' + args[0] + '/participants').once('value');
       printTerm(`\n👥 Участники:`, '#0f0');
       Object.keys(snap.val() || {}).forEach(u => printTerm(`   ${u}`, '#0f0'));
       break;
     }
     case 'settopic': {
-      if (!args[0]) return printTerm("Использование: settopic <topic>", '#fff', true);
+      if (!args[0]) return printTerm("Используй: settopic <topic>", '#fff', true);
       await db.ref('chats/' + currentChatId + '/topic').set(args.join(' '));
       printTerm(`✅ Тема установлена`, '#0f0');
       break;
@@ -1114,7 +1124,7 @@ async function execCmd(cmd) {
       break;
     }
     case 'pin': {
-      if (!args[0]) return printTerm("Использование: pin <msgId>", '#fff', true);
+      if (!args[0]) return printTerm("Используй: pin <msgId>", '#fff', true);
       await db.ref('chats/' + currentChatId + '/pinned').set(args[0]);
       printTerm(`📌 Сообщение закреплено`, '#0f0');
       break;
@@ -1132,28 +1142,37 @@ async function execCmd(cmd) {
 
     // ===== 31-50: СООБЩЕНИЯ =====
     case 'say': {
-      if (args.length === 0) return printTerm("Использование: say <текст>", '#fff', true);
+      if (args.length === 0) return printTerm("Используй: say <текст>", '#fff', true);
       let target = currentUser.login, msg = args.join(' ');
       if (args[0].startsWith('[') && args[0].endsWith(']')) { target = args[0].slice(1,-1); msg = args.slice(1).join(' '); }
-      const lines = msg.match(/.{1,20}/g) || [];
-      await db.ref('messages/' + currentChatId).push({ author: target, text: encrypt(lines.join('\n')), timestamp: Date.now(), type: 'text' });
+      await db.ref('messages/' + currentChatId).push({ 
+        author: target, 
+        text: encrypt(msg), 
+        timestamp: Date.now(), 
+        type: 'text' 
+      });
       printTerm(`📤 Отправлено от ${target}`, '#0f0');
       break;
     }
     case 'broadcast': {
-      if (!args[0]) return printTerm("Использование: broadcast <текст>", '#fff', true);
+      if (!args[0]) return printTerm("Используй: broadcast <текст>", '#fff', true);
       const msg = args.join(' ');
       const chats = await db.ref('chats').once('value');
       let count = 0;
       chats.forEach(chat => {
-        db.ref('messages/' + chat.key).push({ author: `[РАССЫЛКА] ${currentUser.login}`, text: encrypt(msg), timestamp: Date.now(), type: 'text' });
+        db.ref('messages/' + chat.key).push({ 
+          author: `[РАССЫЛКА] ${currentUser.login}`, 
+          text: encrypt(msg), 
+          timestamp: Date.now(), 
+          type: 'text' 
+        });
         count++;
       });
       printTerm(`📡 Отправлено в ${count} чатов`, '#0f0');
       break;
     }
     case 'msgdel': {
-      if (args.length < 2) return printTerm("Использование: msgdel <chat> <msgId>", '#fff', true);
+      if (args.length < 2) return printTerm("Используй: msgdel <chat> <msgId>", '#fff', true);
       await db.ref('messages/' + args[0] + '/' + args[1]).remove();
       printTerm(`🗑️ Удалено`, '#0f0');
       break;
@@ -1171,13 +1190,16 @@ async function execCmd(cmd) {
       break;
     }
     case 'search': {
-      if (!args[0]) return printTerm("Использование: search <текст>", '#fff', true);
+      if (!args[0]) return printTerm("Используй: search <текст>", '#fff', true);
       const q = args.join(' ').toLowerCase();
       const snap = await db.ref('messages/' + currentChatId).limitToLast(100).once('value');
       let found = 0;
       snap.forEach(child => {
         const txt = decrypt(child.val().text).toLowerCase();
-        if (txt.includes(q)) { found++; printTerm(`[${child.key}] ${child.val().author}: ${txt.substring(0,50)}`, '#ff0'); }
+        if (txt.includes(q)) { 
+          found++; 
+          printTerm(`[${child.key}] ${child.val().author}: ${txt.substring(0,50)}`, '#ff0'); 
+        }
       });
       printTerm(`\nНайдено: ${found}`, '#0f0');
       break;
@@ -1230,9 +1252,9 @@ async function execCmd(cmd) {
       break;
     }
     case 'msginfo': {
-      if (!args[0]) return printTerm("Использование: msginfo <msgId>", '#fff', true);
+      if (!args[0]) return printTerm("Используй: msginfo <msgId>", '#fff', true);
       const snap = await db.ref('messages/' + currentChatId + '/' + args[0]).once('value');
-      if (!snap.exists()) return printTerm("Не найдено", '#fff', true);
+      if (!snap.exists()) return printTerm("❌ Не найдено", '#fff', true);
       const d = snap.val();
       printTerm(`\n📨 Сообщение ${args[0]}:`, '#0f0');
       printTerm(`   Автор: ${d.author}`);
@@ -1242,7 +1264,7 @@ async function execCmd(cmd) {
       break;
     }
     case 'editmsg': {
-      if (args.length < 2) return printTerm("Использование: editmsg <id> <текст>", '#fff', true);
+      if (args.length < 2) return printTerm("Используй: editmsg <id> <текст>", '#fff', true);
       const id = args[0];
       const text = args.slice(1).join(' ');
       await db.ref('messages/' + currentChatId + '/' + id + '/text').set(encrypt(text));
@@ -1250,37 +1272,40 @@ async function execCmd(cmd) {
       break;
     }
     case 'forward': {
-      if (args.length < 2) return printTerm("Использование: forward <chat> <msgId>", '#fff', true);
+      if (args.length < 2) return printTerm("Используй: forward <chat> <msgId>", '#fff', true);
       const [chat, msgId] = args;
       const snap = await db.ref('messages/' + currentChatId + '/' + msgId).once('value');
-      if (!snap.exists()) return printTerm("Не найдено", '#fff', true);
+      if (!snap.exists()) return printTerm("❌ Не найдено", '#fff', true);
       const d = snap.val();
       await db.ref('messages/' + chat).push({ ...d, timestamp: Date.now(), forwarded: true, originalChat: currentChatId });
       printTerm(`✅ Переслано в ${chat}`, '#0f0');
       break;
     }
     case 'reply': {
-      if (args.length < 2) return printTerm("Использование: reply <msgId> <текст>", '#fff', true);
+      if (args.length < 2) return printTerm("Используй: reply <msgId> <текст>", '#fff', true);
       const msgId = args[0];
       const text = args.slice(1).join(' ');
       const snap = await db.ref('messages/' + currentChatId + '/' + msgId).once('value');
-      if (!snap.exists()) return printTerm("Не найдено", '#fff', true);
+      if (!snap.exists()) return printTerm("❌ Не найдено", '#fff', true);
       const orig = snap.val();
       await db.ref('messages/' + currentChatId).push({
-        author: currentUser.login, text: encrypt(text), timestamp: Date.now(), type: 'text',
+        author: currentUser.login, 
+        text: encrypt(text), 
+        timestamp: Date.now(), 
+        type: 'text',
         replyTo: { key: msgId, author: orig.author, text: decrypt(orig.text).substring(0,30) }
       });
       printTerm(`✅ Ответ отправлен`, '#0f0');
       break;
     }
     case 'mute': {
-      if (!args[0]) return printTerm("Использование: mute <user>", '#fff', true);
+      if (!args[0]) return printTerm("Используй: mute <user>", '#fff', true);
       await db.ref('muted/' + currentChatId + '/' + args[0]).set({ by: currentUser.login, at: Date.now() });
       printTerm(`🔇 ${args[0]} замучен`, '#0f0');
       break;
     }
     case 'unmute': {
-      if (!args[0]) return printTerm("Использование: unmute <user>", '#fff', true);
+      if (!args[0]) return printTerm("Используй: unmute <user>", '#fff', true);
       await db.ref('muted/' + currentChatId + '/' + args[0]).remove();
       printTerm(`🔊 ${args[0]} размучен`, '#0f0');
       break;
@@ -1300,31 +1325,35 @@ async function execCmd(cmd) {
 
     // ===== 51-65: БАЗА ДАННЫХ =====
     case 'query': {
-      if (!args[0]) return printTerm("Использование: query <path>", '#fff', true);
+      if (!args[0]) return printTerm("Используй: query <path>", '#fff', true);
       const snap = await db.ref(args[0]).once('value');
       printTerm(JSON.stringify(snap.val(), null, 2), '#0f0');
       break;
     }
     case 'set': {
-      if (args.length < 2) return printTerm("Использование: set <path> <value>", '#fff', true);
+      if (args.length < 2) return printTerm("Используй: set <path> <value>", '#fff', true);
       await db.ref(args[0]).set(args.slice(1).join(' '));
       printTerm(`✅ Установлено`, '#0f0');
       break;
     }
     case 'del': {
-      if (!args[0]) return printTerm("Использование: del <path>", '#fff', true);
+      if (!args[0]) return printTerm("Используй: del <path>", '#fff', true);
       await db.ref(args[0]).remove();
       printTerm(`🗑️ Удалено`, '#f00');
       break;
     }
     case 'export': {
       printTerm("📦 Экспорт...", '#0f0');
-      const data = { users: await db.ref('users').once('value').then(s=>s.val()), chats: await db.ref('chats').once('value').then(s=>s.val()), timestamp: Date.now() };
+      const data = { 
+        users: await db.ref('users').once('value').then(s=>s.val()), 
+        chats: await db.ref('chats').once('value').then(s=>s.val()), 
+        timestamp: Date.now() 
+      };
       printTerm(`Экспортировано ${JSON.stringify(data).length} байт`, '#0f0');
       break;
     }
     case 'wipe': {
-      if (!args[0]) return printTerm("Использование: wipe <path>", '#fff', true);
+      if (!args[0]) return printTerm("Используй: wipe <path>", '#fff', true);
       if (!confirm(`⚠️ ОЧИСТИТЬ ${args[0]}?`)) return;
       await db.ref(args[0]).remove();
       printTerm(`💥 Очищено`, '#f00');
@@ -1338,9 +1367,9 @@ async function execCmd(cmd) {
       break;
     }
     case 'restore': {
-      if (!args[0]) return printTerm("Использование: restore <backupId>", '#fff', true);
+      if (!args[0]) return printTerm("Используй: restore <backupId>", '#fff', true);
       const snap = await db.ref('backups/' + args[0]).once('value');
-      if (!snap.exists()) return printTerm("Бэкап не найден", '#fff', true);
+      if (!snap.exists()) return printTerm("❌ Бэкап не найден", '#fff', true);
       if (!confirm('⚠️ ВОССТАНОВИТЬ?')) return;
       await db.ref('/').update(snap.val());
       printTerm(`✅ Восстановлено`, '#0f0');
@@ -1372,26 +1401,26 @@ async function execCmd(cmd) {
       break;
     }
     case 'createindex': {
-      if (!args[0]) return printTerm("Использование: createindex <path>", '#fff', true);
+      if (!args[0]) return printTerm("Используй: createindex <path>", '#fff', true);
       printTerm(`✅ Индекс создан`, '#0f0');
       break;
     }
     case 'migrate': {
-      if (args.length < 2) return printTerm("Использование: migrate <from> <to>", '#fff', true);
+      if (args.length < 2) return printTerm("Используй: migrate <from> <to>", '#fff', true);
       const data = await db.ref(args[0]).once('value');
       await db.ref(args[1]).set(data.val());
       printTerm(`✅ Миграция завершена`, '#0f0');
       break;
     }
     case 'clone': {
-      if (args.length < 2) return printTerm("Использование: clone <path> <newpath>", '#fff', true);
+      if (args.length < 2) return printTerm("Используй: clone <path> <newpath>", '#fff', true);
       const data = await db.ref(args[0]).once('value');
       await db.ref(args[1]).set(data.val());
       printTerm(`✅ Клонировано`, '#0f0');
       break;
     }
     case 'diff': {
-      if (args.length < 2) return printTerm("Использование: diff <path1> <path2>", '#fff', true);
+      if (args.length < 2) return printTerm("Используй: diff <path1> <path2>", '#fff', true);
       const d1 = await db.ref(args[0]).once('value');
       const d2 = await db.ref(args[1]).once('value');
       printTerm(`\n📊 Сравнение:`, '#0f0');
@@ -1410,7 +1439,7 @@ async function execCmd(cmd) {
       break;
     }
     case 'config': {
-      if (args.length < 2) return printTerm("Использование: config <key> <val>", '#fff', true);
+      if (args.length < 2) return printTerm("Используй: config <key> <val>", '#fff', true);
       printTerm(`⚠️ Не реализовано`, '#fff', true);
       break;
     }
@@ -1431,9 +1460,15 @@ async function execCmd(cmd) {
       break;
     }
     case 'maintenance': {
-      if (args[0] === 'on') { await db.ref('system/maintenance').set(true); printTerm("🛑 Включено", '#f00'); }
-      else if (args[0] === 'off') { await db.ref('system/maintenance').remove(); printTerm("✅ Выключено", '#0f0'); }
-      else printTerm("Использование: maintenance <on|off>", '#fff', true);
+      if (args[0] === 'on') { 
+        await db.ref('system/maintenance').set(true); 
+        printTerm("🛑 Включено", '#f00'); 
+      } else if (args[0] === 'off') { 
+        await db.ref('system/maintenance').remove(); 
+        printTerm("✅ Выключено", '#0f0'); 
+      } else {
+        printTerm("Используй: maintenance <on|off>", '#fff', true);
+      }
       break;
     }
     case 'logs': {
@@ -1463,7 +1498,7 @@ async function execCmd(cmd) {
         printTerm(`\n💾 Память:`, '#0f0');
         printTerm(`   Использовано: ${Math.round(performance.memory.usedJSHeapSize/1024/1024)}MB`);
         printTerm(`   Всего: ${Math.round(performance.memory.totalJSHeapSize/1024/1024)}MB`, '#0f0');
-      } else printTerm("Инфо недоступно", '#fff', true);
+      } else printTerm("❌ Инфо недоступно", '#fff', true);
       break;
     }
     case 'cpu': {
@@ -1483,7 +1518,7 @@ async function execCmd(cmd) {
       break;
     }
     case 'kill': {
-      if (!args[0]) return printTerm("Использование: kill <pid>", '#fff', true);
+      if (!args[0]) return printTerm("Используй: kill <pid>", '#fff', true);
       printTerm(`✅ Процесс ${args[0]} убит`, '#0f0');
       break;
     }
@@ -1493,7 +1528,7 @@ async function execCmd(cmd) {
       break;
     }
     case 'setenv': {
-      if (args.length < 2) return printTerm("Использование: setenv <key> <val>", '#fff', true);
+      if (args.length < 2) return printTerm("Используй: setenv <key> <val>", '#fff', true);
       printTerm(`✅ Установлено`, '#0f0');
       break;
     }
@@ -1516,17 +1551,17 @@ async function execCmd(cmd) {
 
     // ===== 86-95: БЕЗОПАСНОСТЬ =====
     case 'encrypt': {
-      if (!args[0]) return printTerm("Использование: encrypt <текст>", '#fff', true);
+      if (!args[0]) return printTerm("Используй: encrypt <текст>", '#fff', true);
       printTerm(encrypt(args.join(' ')), '#0f0');
       break;
     }
     case 'decrypt': {
-      if (!args[0]) return printTerm("Использование: decrypt <текст>", '#fff', true);
+      if (!args[0]) return printTerm("Используй: decrypt <текст>", '#fff', true);
       printTerm(decrypt(args.join(' ')), '#0f0');
       break;
     }
     case 'hash': {
-      if (!args[0]) return printTerm("Использование: hash <текст>", '#fff', true);
+      if (!args[0]) return printTerm("Используй: hash <текст>", '#fff', true);
       let hash = 0;
       const str = args.join(' ');
       for (let i = 0; i < str.length; i++) { hash = ((hash << 5) - hash) + str.charCodeAt(i); hash |= 0; }
@@ -1549,11 +1584,11 @@ async function execCmd(cmd) {
     case 'firewall': {
       if (args[0] === 'on') { printTerm("🔥 Firewall включен", '#0f0'); }
       else if (args[0] === 'off') { printTerm("🔥 Firewall выключен", '#0f0'); }
-      else printTerm("Использование: firewall <on|off>", '#fff', true);
+      else printTerm("Используй: firewall <on|off>", '#fff', true);
       break;
     }
     case 'ipban': {
-      if (!args[0]) return printTerm("Использование: ipban <ip>", '#fff', true);
+      if (!args[0]) return printTerm("Используй: ipban <ip>", '#fff', true);
       printTerm(`🚫 IP ${args[0]} забанен`, '#f00');
       break;
     }
@@ -1567,65 +1602,21 @@ async function execCmd(cmd) {
       printTerm(`   Последняя проверка: ${new Date().toLocaleString()}`, '#0f0');
       break;
     }
-          case 'frontendmod': {
-      const mode = args[0]?.toLowerCase();
-      const r = document.documentElement;
-      
-      switch(mode) {
-        case 'ui': case 'default': case 'paper':
-          r.style.cssText = '--bg:#e8dcc8; --text:#333; --accent:#d4753a; --msg-bg:#fffdf5; --sidebar-bg:#f5efe6;';
-          // 🔥 ЗАКРЫВАЕМ ТЕРМИНАЛ И ВОЗВРАЩАЕМ В ЧАТ
-          const term = document.getElementById('terminal-overlay');
-          const sidebar = document.getElementById('sidebar');
-          const chatArea = document.getElementById('chat-area');
-          if (term) term.style.display = 'none';
-          if (sidebar) sidebar.style.display = 'flex';
-          if (chatArea) chatArea.style.display = 'flex';
-          printTerm("✅ Стандартный UI (Paper Theme) активирован", '#0f0');
-          setTimeout(() => {
-            printTerm("👋 Возврат в чат...", '#0f0');
-            setTimeout(() => {
-              if (term) term.style.display = 'none';
-              if (sidebar) sidebar.style.display = 'flex';
-              if (chatArea) chatArea.style.display = 'flex';
-            }, 500);
-          }, 1000);
-          break;
-        case 'matrix':
-          r.style.cssText = '--bg:#000; --text:#0f0; --accent:#0f0; --msg-bg:#0a1f0a; --sidebar-bg:#050f05;';
-          printTerm("🔲 MATRIX UI активирован", '#0f0');
-          break;
-        case 'dark':
-          r.style.cssText = '--bg:#121212; --text:#e0e0e0; --accent:#bb86fc; --msg-bg:#1e1e1e; --sidebar-bg:#1a1a1a;';
-          printTerm("🌑 DARK UI активирован", '#0f0');
-          break;
-        case 'hacker':
-          r.style.cssText = '--bg:#0a0a0a; --text:#00ff41; --accent:#ff0055; --msg-bg:#111; --sidebar-bg:#0d0d0d;';
-          printTerm("🔥 HACKER UI активирован", '#0f0');
-          break;
-        case 'light':
-          r.style.cssText = '--bg:#ffffff; --text:#000; --accent:#007bff; --msg-bg:#f8f9fa; --sidebar-bg:#f1f3f5;';
-          printTerm("☀️ LIGHT UI активирован", '#0f0');
-          break;
-        default:
-          printTerm("Использование: frontendmod <ui|matrix|dark|hacker|light>", '#fff', true);
-      }
-      break;
-    }
+
     // ===== 96-100: УТИЛИТЫ =====
     case 'ping': {
-      if (!args[0]) return printTerm("Использование: ping <host>", '#fff', true);
+      if (!args[0]) return printTerm("Используй: ping <host>", '#fff', true);
       printTerm(`PING ${args[0]}: 64 байт, ttl=54, time=${Math.floor(Math.random()*100)}мс`, '#0f0');
       break;
     }
     case 'trace': {
-      if (!args[0]) return printTerm("Использование: trace <host>", '#fff', true);
+      if (!args[0]) return printTerm("Используй: trace <host>", '#fff', true);
       printTerm(`Tracing ${args[0]}...`, '#0f0');
       for(let i=1; i<=4; i++) printTerm(` ${i}  192.168.1.${i}  ${Math.floor(Math.random()*50)}ms`, '#0f0');
       break;
     }
     case 'whois': {
-      if (!args[0]) return printTerm("Использование: whois <domain>", '#fff', true);
+      if (!args[0]) return printTerm("Используй: whois <domain>", '#fff', true);
       printTerm(`\n🔍 Whois ${args[0]}:`, '#0f0');
       printTerm(`   Registrar: Example Inc.`, '#0f0');
       printTerm(`   Created: 2020-01-01`, '#0f0');
@@ -1636,10 +1627,28 @@ async function execCmd(cmd) {
       break;
     case 'exit': 
       printTerm("👋 Завершение...", '#0f0');
-      setTimeout(() => logout(), 300);
+      setTimeout(() => {
+        localStorage.removeItem('shpak_user');
+        location.reload();
+      }, 500);
       break;
+    case 'frontendmod': {
+      const mode = args[0]?.toLowerCase();
+      const r = document.documentElement;
+      if (mode === 'ui' || mode === 'paper') {
+        r.style.cssText = '';
+        document.getElementById('terminal-overlay').style.display = 'none';
+        document.getElementById('sidebar').style.display = 'flex';
+        document.getElementById('chat-area').style.display = 'flex';
+        printTerm("✅ Вернулся в чат", '#0f0');
+      } else {
+         printTerm("Используй: frontendmod ui", '#fff', true);
+      }
+      break;
+    }
     
-    default: printTerm(`bash: ${c}: команда не найдена. Введите 'help' для списка.`, '#fff', true);
+    default: 
+      printTerm(`bash: ${c}: command not found. Введи 'help' или '?'`, '#fff', true);
   }
 }
 

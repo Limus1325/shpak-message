@@ -172,7 +172,8 @@ function runBootSequence() {
   const showLine = () => {
     if (i < lines.length) {
       const div = document.createElement('div');
-      div.className = `boot-line <LaTex>id_8</LaTex>{lines[i].text}`;
+      div.className = `boot-line ${lines[i].class}`;
+      div.textContent = `> ${lines[i].text}`;
       log.appendChild(div);
       i++;
       setTimeout(showLine, 200 + Math.random() * 300);
@@ -196,13 +197,6 @@ function startApp() {
   loadChatsList();
   switchChat('general');
   listenForCalls();
-  requestNotifPermission();
-}
-
-function requestNotifPermission() {
-  if ("Notification" in window && Notification.permission !== "granted") {
-    Notification.requestPermission();
-  }
 }
 
 const saved = localStorage.getItem('shpak_user');
@@ -227,7 +221,7 @@ function loadChatsList() {
         const div = document.createElement('div');
         div.className = 'chat-item' + (child.key === currentChatId ? ' active' : '');
         div.onclick = () => switchChat(child.key);
-        div.innerHTML = `<div class="chat-avatar">📄</div><div class="chat-info"><div class="chat-name"><LaTex>id_7</LaTex>{child.key}">...</div></div>`;
+        div.innerHTML = `<div class="chat-avatar">📄</div><div class="chat-info"><div class="chat-name">${chat.name}</div><div class="chat-last" id="last-${child.key}">...</div></div>`;
         list.appendChild(div);
       }
     });
@@ -264,18 +258,6 @@ function loadMessages(chatId) {
     const data = snap.val();
     if (blockedUsers.includes(data.author)) return;
     renderMessage(data, snap.key, chatId);
-    if (data.author !== currentUser.login && "Notification" in window && Notification.permission === "granted") {
-      const rawText = decrypt(data.text).replace(/\n/g, ' ').trim();
-      const preview = rawText.length > 15 ? rawText.substring(0, 15) + '...' : rawText;
-      const roleTag = data.role && data.role !== 'user' ? ` (<LaTex>id_6</LaTex>{data.author}<LaTex>id_5</LaTex>{snap.key}`,
-        requireInteraction: false,
-        silent: false
-      });
-      notif.onclick = () => {
-        window.focus();
-        notif.close();
-      };
-    }
   });
 }
 
@@ -284,7 +266,550 @@ function renderMessage(data, key, chatId) {
   const isMe = data.author === currentUser.login;
   const time = new Date(data.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
   const div = document.createElement('div');
-  div.className = `message <LaTex>id_4</LaTex>{chatId}','<LaTex>id_3</LaTex>{key}','<LaTex>id_2</LaTex>{decrypt(data.text).replace(/'/g, "\\'").substring(0,30)}')">↩️</span>`;
+  div.className = `message ${isMe ? 'outgoing' : 'incoming'}`;
+  div.dataset.key = key;
+  let delBtn = (currentUser.role === 'admin' || currentUser.role === 'root') ? `<span class="del-btn" onclick="deleteMsg('${chatId}','${key}')">🗑️</span>` : '';
+  const replyBtn = `<span class="reply-btn" onclick="startReply('${key}','${data.author}','${decrypt(data.text).replace(/'/g, "\\'").substring(0,30)}')">↩️</span>`;
   let replyContext = '';
   if (data.replyTo) {
-    replyContext = `<div class="reply-context" onclick="scrollToMessage('<LaTex>id_1</LaTex>{data.replyTo.author
+    replyContext = `<div class="reply-context" onclick="scrollToMessage('${data.replyTo.key}')"><span class="reply-context-author">@${data.replyTo.author}:</span> <span class="reply-context-text">${data.replyTo.text}</span></div>`;
+  }
+  let content = data.type === 'image' ? `<img src="${data.image}" class="photo-preview" onclick="openPhoto('${data.image}','${data.author}','${time}')">` : '<div class="msg-text"></div>';
+  div.innerHTML = `${!isMe ? `<div class="msg-author">${data.author} ${delBtn}${replyBtn}</div>` : `<div class="msg-head-right" style="text-align:right">${delBtn}${replyBtn}</div>`}${replyContext}${content}<div class="msg-meta"><span>${time}</span></div>`;
+  container.appendChild(div);
+  if (data.type === 'text') {
+    const txtEl = div.querySelector('.msg-text');
+    animateDecrypt(txtEl, data.text, decrypt(data.text), 40);
+  }
+  container.scrollTop = container.scrollHeight;
+  const lastEl = document.getElementById('last-' + chatId);
+  if (lastEl) lastEl.textContent = data.author + ': ' + (data.type === 'text' ? decrypt(data.text).substring(0, 20) + '...' : '📷 Фото');
+}
+
+const msgInput = document.getElementById('msg-input');
+const charCounter = document.getElementById('char-counter');
+if(msgInput && charCounter) {
+  msgInput.addEventListener('input', function() {
+    charCounter.textContent = `${this.value.length}/200`;
+  });
+}
+
+function sendMessage() {
+  if (!currentUser || !currentChatId) return;
+  const input = document.getElementById('msg-input');
+  let text = input.value.trim();
+  if (!text) return;
+  if (text.length > 200) text = text.substring(0, 200);
+  const lines = text.match(/.{1,20}/g) || [];
+  const finalText = lines.join('\n');
+  let author = currentUser.login;
+  const forceInput = document.getElementById('force-input');
+  if ((currentUser.role === 'root' || currentUser.role === 'admin') && forceInput?.value.trim()) {
+    author = forceInput.value.trim();
+  }
+  const messageData = {
+    author, text: encrypt(finalText), timestamp: Date.now(), type: 'text', role: currentUser.role
+  };
+  if (replyTo) {
+    messageData.replyTo = { key: replyTo.key, author: replyTo.author, text: replyTo.text };
+  }
+  db.ref('messages/' + currentChatId).push(messageData).then(() => {
+    input.value = '';
+    input.focus();
+    if(charCounter) charCounter.textContent = '0/200';
+    cancelReply();
+  });
+}
+
+function deleteMsg(chatId, key) {
+  if (currentUser.role !== 'admin' && currentUser.role !== 'root') return;
+  if (confirm('Удалить?')) db.ref('messages/' + chatId + '/' + key).remove();
+}
+
+function animateDecrypt(el, enc, dec, speed) {
+  let i = 0;
+  const int = setInterval(() => {
+    if (i < dec.length) { el.textContent = dec.substring(0, i+1) + enc.substring(i+1); i++; }
+    else { el.textContent = dec; clearInterval(int); }
+  }, speed);
+}
+
+function startReply(msgKey, author, text) {
+  replyTo = { key: msgKey, author, text };
+  document.getElementById('reply-preview').style.display = 'block';
+  document.getElementById('reply-to-author').textContent = '@' + author;
+  document.getElementById('reply-to-text').textContent = text + (text.length >= 30 ? '...' : '');
+  document.getElementById('msg-input').focus();
+}
+
+function cancelReply() {
+  replyTo = null;
+  document.getElementById('reply-preview').style.display = 'none';
+  document.getElementById('msg-input').focus();
+}
+
+function scrollToMessage(msgKey) {
+  const el = document.querySelector(`[data-key="${msgKey}"]`);
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.style.outline = '2px solid var(--accent)';
+    setTimeout(() => el.style.outline = '', 2000);
+  }
+}
+
+function listenForCalls() {
+  if (callListener) db.ref('calls').off('child_added', callListener);
+  callListener = db.ref('calls').orderByChild('to').equalTo(currentUser.login).on('child_added', snap => {
+    const d = snap.val();
+    if (d.status === 'offering') {
+      const toast = document.getElementById('incoming-call-toast');
+      const callerName = document.getElementById('caller-name');
+      if(toast && callerName) {
+        callerName.textContent = d.from;
+        toast.style.display = 'block';
+        window.pendingCallId = snap.key;
+        window.pendingCallData = d;
+      }
+    }
+  });
+}
+
+async function startCall() {
+  let target = prompt("Кому звоним? (логин)");
+  if (!target) return;
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const overlay = document.getElementById('call-overlay');
+    const status = document.getElementById('call-status');
+    if(overlay) overlay.style.display = 'flex';
+    if(status) status.textContent = 'Вызов...';
+    peerConnection = new RTCPeerConnection(ICE_SERVERS);
+    localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
+    peerConnection.ontrack = e => {
+      const remoteAudio = document.getElementById('remote-audio');
+      if(remoteAudio) remoteAudio.srcObject = e.streams[0];
+      if(status) status.textContent = 'Разговор';
+      startCallTimer();
+    };
+    peerConnection.onicecandidate = e => {
+      if (e.candidate) db.ref('calls/active/' + callId + '/candidates').push(encrypt(JSON.stringify(e.candidate.toJSON())));
+    };
+    const offer = await peerConnection.createOffer();
+    await peerConnection.setLocalDescription(offer);
+    callId = db.ref('calls').push().key;
+    const activeId = db.ref('calls/active').push().key;
+    db.ref('calls/' + callId).set({ from: currentUser.login, to: target, status: 'offering', activeRef: activeId });
+    db.ref('calls/active/' + activeId).set({ type: 'offer', sdp: encrypt(offer.sdp), caller: currentUser.login });
+    db.ref('calls/' + callId + '/status').on('value', snap => {
+      if (snap.val() === 'ended' || snap.val() === 'rejected') endCall();
+    });
+    db.ref('calls/' + callId + '/status').on('value', snap => {
+      if (snap.val() === 'answered') {
+        db.ref('calls/active/' + activeId).once('value').then(s => {
+          const data = s.val();
+          if (data?.answerSdp) peerConnection.setRemoteDescription({ type: 'answer', sdp: decrypt(data.answerSdp) });
+        });
+        db.ref('calls/active/' + activeId + '/candidates').on('child_added', c => peerConnection.addIceCandidate(new RTCIceCandidate(JSON.parse(decrypt(c.val())))));
+      }
+    });
+  } catch (err) { alert('❌ Микрофон: ' + err.message); }
+}
+
+async function acceptIncomingCall() {
+  const toast = document.getElementById('incoming-call-toast');
+  if(toast) toast.style.display = 'none';
+  if (!window.pendingCallId) return;
+  const data = window.pendingCallData;
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const overlay = document.getElementById('call-overlay');
+    const status = document.getElementById('call-status');
+    if(overlay) overlay.style.display = 'flex';
+    peerConnection = new RTCPeerConnection(ICE_SERVERS);
+    localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
+    peerConnection.ontrack = e => {
+      const remoteAudio = document.getElementById('remote-audio');
+      if(remoteAudio) remoteAudio.srcObject = e.streams[0];
+      if(status) status.textContent = 'Разговор';
+      startCallTimer();
+    };
+    peerConnection.onicecandidate = e => {
+      if (e.candidate) db.ref('calls/active/' + data.activeRef + '/candidates').push(encrypt(JSON.stringify(e.candidate.toJSON())));
+    };
+    const offerSdp = await db.ref('calls/active/' + data.activeRef + '/sdp').once('value').then(s => decrypt(s.val()));
+    await peerConnection.setRemoteDescription({ type: 'offer', sdp: offerSdp });
+    const answer = await peerConnection.createAnswer();
+    await peerConnection.setLocalDescription(answer);
+    db.ref('calls/active/' + data.activeRef).update({ answerSdp: encrypt(answer.sdp) });
+    db.ref('calls/' + window.pendingCallId).update({ status: 'answered' });
+    db.ref('calls/active/' + data.activeRef + '/candidates').on('child_added', c => peerConnection.addIceCandidate(new RTCIceCandidate(JSON.parse(decrypt(c.val())))));
+    db.ref('calls/' + window.pendingCallId + '/status').on('value', snap => {
+      if (snap.val() === 'ended' || snap.val() === 'rejected') endCall();
+    });
+  } catch (err) { alert('Ошибка: ' + err.message); }
+}
+
+function rejectIncomingCall() {
+  const toast = document.getElementById('incoming-call-toast');
+  if(toast) toast.style.display = 'none';
+  if (window.pendingCallId) db.ref('calls/' + window.pendingCallId).update({ status: 'rejected' });
+}
+
+function endCall() {
+  if (localStream) localStream.getTracks().forEach(t => t.stop());
+  if (peerConnection) peerConnection.close();
+  const overlay = document.getElementById('call-overlay');
+  const remoteAudio = document.getElementById('remote-audio');
+  if(overlay) overlay.style.display = 'none';
+  if(remoteAudio) remoteAudio.srcObject = null;
+  clearInterval(callTimerInterval);
+  if (callId) db.ref('calls/' + callId).update({ status: 'ended' });
+  callId = null;
+}
+
+function toggleMute() {
+  if (localStream) {
+    const track = localStream.getAudioTracks()[0];
+    track.enabled = !track.enabled;
+    const btn = document.querySelector('.mute-btn');
+    if(btn) {
+      btn.classList.toggle('muted');
+      btn.textContent = track.enabled ? '🎤' : '🔇';
+    }
+  }
+}
+
+function startCallTimer() {
+  callSeconds = 0;
+  clearInterval(callTimerInterval);
+  callTimerInterval = setInterval(() => {
+    callSeconds++;
+    const timerEl = document.getElementById('call-timer');
+    if(timerEl) timerEl.textContent = `${Math.floor(callSeconds/60).toString().padStart(2,'0')}:${(callSeconds%60).toString().padStart(2,'0')}`;
+  }, 1000);
+}
+
+function triggerFile() { document.getElementById('file-input').click(); }
+function handleFile(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => db.ref('messages/' + currentChatId).push({ author: currentUser.login, image: ev.target.result, timestamp: Date.now(), type: 'image' });
+  reader.readAsDataURL(file);
+}
+function openPhoto(src) {
+  const modalImg = document.getElementById('modal-img');
+  const modal = document.getElementById('photo-modal');
+  if(modalImg) modalImg.src = src;
+  if(modal) modal.style.display = 'flex';
+}
+function closePhotoModal(e) {
+  if (!e || e.target.id === 'photo-modal' || e.target.className === 'close-btn') {
+    const modal = document.getElementById('photo-modal');
+    if(modal) modal.style.display = 'none';
+  }
+}
+function toggleEmoji() {
+  const p = document.getElementById('emoji-picker');
+  if(p) p.style.display = p.style.display === 'none' ? 'block' : 'none';
+}
+function insertEmoji(em) {
+  const input = document.getElementById('msg-input');
+  const picker = document.getElementById('emoji-picker');
+  if(input) input.value += em;
+  if(picker) picker.style.display = 'none';
+}
+function openSearch() {
+  const overlay = document.getElementById('search-overlay');
+  const input = document.getElementById('search-input');
+  if(overlay) overlay.style.display = 'block';
+  if(input) input.focus();
+}
+function closeSearch() {
+  const overlay = document.getElementById('search-overlay');
+  if(overlay) overlay.style.display = 'none';
+}
+function handleSearch(q) {
+  const resDiv = document.getElementById('search-results');
+  if (!resDiv) return;
+  if (q.length < 2) { resDiv.innerHTML = ''; return; }
+  db.ref('messages/' + currentChatId).limitToLast(50).once('value').then(snap => {
+    resDiv.innerHTML = ''; let found = false;
+    snap.forEach(child => {
+      const m = child.val();
+      if (m.type === 'text') {
+        const txt = decrypt(m.text);
+        if (txt.toLowerCase().includes(q.toLowerCase())) {
+          found = true;
+          const d = document.createElement('div'); d.className = 'search-item';
+          d.innerHTML = `<b>${m.author}:</b> ${txt.substring(0,40)}...`;
+          d.onclick = () => {
+            const el = document.querySelector(`[data-key="${child.key}"]`);
+            if(el) {
+              el.scrollIntoView({behavior:'smooth', block:'center'});
+              el.style.outline = '2px solid var(--accent)';
+              setTimeout(() => el.style.outline = '', 2000);
+            }
+            closeSearch();
+          };
+          resDiv.appendChild(d);
+        }
+      }
+    });
+    if (!found) resDiv.innerHTML = '<div class="search-item">Ничего не найдено</div>';
+  });
+}
+function toggleProfileMenu() {
+  const menu = document.getElementById('profile-menu');
+  const chatMenu = document.getElementById('chat-menu');
+  if(menu) menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+  if(chatMenu) chatMenu.style.display = 'none';
+}
+function toggleChatMenu() {
+  const menu = document.getElementById('chat-menu');
+  const profMenu = document.getElementById('profile-menu');
+  if(menu) menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+  if(profMenu) profMenu.style.display = 'none';
+}
+function closeAllMenus() {
+  const pm = document.getElementById('profile-menu');
+  const cm = document.getElementById('chat-menu');
+  if(pm) pm.style.display = 'none';
+  if(cm) cm.style.display = 'none';
+}
+function showProfile() { closeAllMenus(); alert(`👤 Профиль\nLogin: ${currentUser.login}\nRole: ${currentUser.role.toUpperCase()}`); }
+function blockCurrentUser() {
+  closeAllMenus();
+  const t = prompt("Логин для блокировки:");
+  if(t) {
+    db.ref('blocked/' + currentUser.login + '/' + t).set(true);
+    alert('🚫 Заблокирован');
+    loadMessages(currentChatId);
+  }
+}
+function deleteCurrentChat() {
+  closeAllMenus();
+  if(confirm('🗑️ Удалить чат?')) {
+    db.ref('chats/' + currentChatId).remove();
+    db.ref('messages/' + currentChatId).remove();
+    switchChat('general');
+  }
+}
+function openNewChatModal() {
+  closeAllMenus();
+  const list = document.getElementById('user-list');
+  if(list) list.innerHTML = '';
+  db.ref('users').once('value').then(snap => {
+    snap.forEach(child => {
+      const l = child.key;
+      if(l !== currentUser.login) {
+        const d = document.createElement('label');
+        d.className='user-chk-item';
+        d.innerHTML=`<input type="checkbox" value="${l}"> ${l}`;
+        if(list) list.appendChild(d);
+      }
+    });
+  });
+  const modal = document.getElementById('new-chat-modal');
+  if(modal) modal.style.display = 'flex';
+}
+function closeNewChatModal() {
+  const modal = document.getElementById('new-chat-modal');
+  if(modal) modal.style.display = 'none';
+}
+function createChat() {
+  const nameInput = document.getElementById('new-chat-name');
+  const name = nameInput ? nameInput.value.trim() : '';
+  if (!name) return alert('Название?');
+  const checks = document.querySelectorAll('#user-list input:checked');
+  if (checks.length === 0) return alert('Участники?');
+  const parts = { [currentUser.login]: true };
+  checks.forEach(c => parts[c.value] = true);
+  const ref = db.ref('chats').push();
+  ref.set({ name, created: Date.now(), participants: parts }).then(() => {
+    closeNewChatModal();
+    switchChat(ref.key);
+  });
+}
+function showSystemInfo() { alert(`📊 System Info\nUser: ${currentUser.login}\nRole: ${currentUser.role.toUpperCase()}`); }
+function forceClearDB() { if (confirm('⚠️ NUKE?')) db.ref('messages/' + currentChatId).remove(); }
+
+// ===== ТЕРМИНАЛ =====
+let termHist = [], histIdx = -1;
+
+function initTerminal() {
+  const overlay = document.getElementById('terminal-overlay');
+  const output = document.getElementById('terminal-output');
+  const input = document.getElementById('terminal-input');
+  if(!overlay || !output || !input) return;
+  overlay.style.display = 'block';
+  input.focus();
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      const cmd = input.value.trim();
+      if (cmd) { termHist.push(cmd); histIdx = termHist.length; execCmd(cmd); }
+      input.value = '';
+    } else if (e.key === 'ArrowUp') {
+      if(histIdx > 0) { histIdx--; input.value = termHist[histIdx]; }
+    } else if (e.key === 'ArrowDown') {
+      if(histIdx < termHist.length - 1) { histIdx++; input.value = termHist[histIdx]; }
+      else { histIdx = termHist.length; input.value = ''; }
+    }
+  });
+  db.ref('messages').limitToLast(1).on('child_added', snap => {
+    const d = snap.val();
+    if (d.author !== currentUser.login && d.type === 'text') {
+      const txt = decrypt(d.text).replace(/\s+/g, '\\');
+      printTerm(`<${d.author}>:${txt}`, '#f00');
+    }
+  });
+}
+
+function printTerm(text, color='#0f0', err=false) {
+  const out = document.getElementById('terminal-output');
+  if(!out) return;
+  const div = document.createElement('div');
+  div.style.color = err ? '#fff' : color;
+  div.style.marginBottom = '4px';
+  div.textContent = text;
+  out.appendChild(div);
+  out.scrollTop = out.scrollHeight;
+}
+
+async function execCmd(cmd) {
+  const parts = cmd.split(/\s+/);
+  const c = parts[0].toLowerCase();
+  const args = parts.slice(1);
+  printTerm(`root@killer:/home/Limus# ${cmd}`, '#0f0');
+  switch(c) {
+    case 'help': case '?':
+      printTerm("\n=== 📚 СПРАВКА ===", '#0f0');
+      printTerm("say <msg> - Отправить сообщение");
+      printTerm("useradd <login> <pass> - Добавить пользователя");
+      printTerm("userdel <login> - Удалить пользователя");
+      printTerm("ban/unban <login> - Забанить/разбанить");
+      printTerm("purge - Очистить чат");
+      printTerm("nuke - Удалить все сообщения");
+      printTerm("spy <user> - Следить за пользователем");
+      printTerm("status - Статус системы");
+      printTerm("clear - Очистить терминал");
+      printTerm("exit - Выйти", '#0f0');
+      break;
+    case 'say': {
+      if (args.length === 0) return printTerm("Использование: say <сообщение>", '#fff', true);
+      let target = currentUser.login;
+      let msg = args.join(' ');
+      if (args[0].startsWith('[') && args[0].endsWith(']')) {
+        target = args[0].slice(1, -1);
+        msg = args.slice(1).join(' ');
+      }
+      const lines = msg.match(/.{1,20}/g) || [];
+      const finalText = lines.join('\n');
+      db.ref('messages/' + currentChatId).push({
+        author: target, text: encrypt(finalText), timestamp: Date.now(), type: 'text', role: currentUser.role
+      }).then(() => printTerm(`📤 Отправлено от ${target}`, '#0f0'));
+      break;
+    }
+    case 'useradd': {
+      if (args.length < 2) return printTerm("Использование: useradd <логин> <пароль>", '#fff', true);
+      const [login, pass] = args;
+      await db.ref('users/' + login).set({
+        password: encrypt(pass), role: 'user', displayName: login, created: Date.now()
+      });
+      printTerm(`✅ Пользователь '${login}' создан`, '#0f0');
+      break;
+    }
+    case 'userdel': {
+      if (!args[0]) return printTerm("Использование: userdel <логин>", '#fff', true);
+      await db.ref('users/' + args[0]).remove();
+      printTerm(`🗑️ Пользователь '${args[0]}' удалён`, '#f00');
+      break;
+    }
+    case 'ban': {
+      if (!args[0]) return printTerm("Использование: ban <логин>", '#fff', true);
+      await db.ref('blocked/' + currentUser.login + '/' + args[0]).set(true);
+      printTerm(`🚫 ${args[0]} забанен`, '#f00');
+      break;
+    }
+    case 'unban': {
+      if (!args[0]) return printTerm("Использование: unban <логин>", '#fff', true);
+      await db.ref('blocked/' + currentUser.login + '/' + args[0]).remove();
+      printTerm(`✅ ${args[0]} разбанен`, '#0f0');
+      break;
+    }
+    case 'purge': {
+      if (!confirm('🗑️ Очистить чат?')) return;
+      await db.ref('messages/' + currentChatId).remove();
+      printTerm('💥 Чат очищен', '#0f0');
+      break;
+    }
+    case 'nuke': {
+      if (!confirm('⚠️ УДАЛИТЬ ВСЕ СООБЩЕНИЯ?')) return;
+      await db.ref('messages').remove();
+      printTerm('💥 ВСЕ СООБЩЕНИЯ УНИЧТОЖЕНЫ', '#f00');
+      break;
+    }
+    case 'spy': {
+      if (!args[0]) return printTerm("Использование: spy <юзер>", '#fff', true);
+      printTerm(`👁️ Слежка за ${args[0]}...`, '#0f0');
+      db.ref('messages').orderByChild('author').equalTo(args[0]).limitToLast(10).on('child_added', snap => {
+        const d = snap.val();
+        printTerm(`[${d.author}]: ${decrypt(d.text)}`, '#ff0');
+      });
+      break;
+    }
+    case 'status': {
+      printTerm("\n🖥️ СТАТУС СИСТЕМЫ", '#0f0');
+      printTerm(`Пользователь: ${currentUser.login} (${currentUser.role})`);
+      printTerm(`Чат: ${currentChatId}`, '#0f0');
+      break;
+    }
+    case 'clear':
+      document.getElementById('terminal-output').innerHTML = '';
+      break;
+    case 'exit':
+      printTerm("👋 Завершение сессии...", '#0f0');
+      setTimeout(() => logout(), 300);
+      break;
+    case 'sudo': execCmd(args.join(' ')); break;
+    default: printTerm(`bash: ${c}: команда не найдена`, '#fff', true);
+  }
+}
+
+function logout() {
+  currentUser = null;
+  localStorage.removeItem('shpak_user');
+  const terminal = document.getElementById('terminal-overlay');
+  const screen = document.getElementById('auth-screen');
+  const box = document.getElementById('auth-box');
+  if (terminal) terminal.style.display = 'none';
+  if (screen) {
+    screen.style.display = 'flex';
+    screen.classList.remove('whiteout');
+  }
+  if (box) {
+    box.classList.remove('unfolding');
+    box.style.display = 'block';
+    box.style.opacity = '1';
+    box.style.transform = 'rotate(-2deg)';
+  }
+  const loginInput = document.getElementById('login');
+  const passInput = document.getElementById('pass');
+  if (loginInput) loginInput.value = '';
+  if (passInput) passInput.value = '';
+  setTimeout(() => location.reload(), 500);
+}
+
+const btnEnter = document.getElementById('btn-enter');
+const btnLogout = document.getElementById('btn-logout');
+const btnSend = document.getElementById('btn-send');
+const msgInputEl = document.getElementById('msg-input');
+const passInputEl = document.getElementById('pass');
+const cancelReplyBtn = document.getElementById('cancel-reply');
+
+if(btnEnter) btnEnter.onclick = login;
+if(btnLogout) btnLogout.onclick = logout;
+if(btnSend) btnSend.onclick = sendMessage;
+if(msgInputEl) msgInputEl.addEventListener('keypress', e => { if(e.key==='Enter') sendMessage(); });
+if(passInputEl) passInputEl.addEventListener('keypress', e => { if(e.key==='Enter') login(); });
+if(cancelReplyBtn) cancelReplyBtn.onclick = cancelReply;
+

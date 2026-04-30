@@ -852,6 +852,9 @@ async function execCmd(cmd) {
       printTerm("  65. diff <path1> <path2>        - Сравнить");
       
       printTerm("\n⚙️ СИСТЕМА (66-85):");
+      printTerm("  frontendmod <тема>           - Сменить тему (ui/matrix/dark/hacker/light)");
+      printTerm("  status                       - Статус системы");
+      // ... остальные команды
       printTerm("  66. status                      - Статус системы");
       printTerm("  67. config <key> <val>          - Конфигурация");
       printTerm("  68. restart                     - Перезапуск");

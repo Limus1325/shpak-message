@@ -1540,18 +1540,33 @@ async function execCmd(cmd) {
       printTerm(`   Последняя проверка: ${new Date().toLocaleString()}`, '#0f0');
       break;
     }
-        case 'frontendmod': {
+          case 'frontendmod': {
       const mode = args[0]?.toLowerCase();
       const r = document.documentElement;
       
       switch(mode) {
         case 'ui': case 'default': case 'paper':
           r.style.cssText = '--bg:#e8dcc8; --text:#333; --accent:#d4753a; --msg-bg:#fffdf5; --sidebar-bg:#f5efe6;';
+          // 🔥 ЗАКРЫВАЕМ ТЕРМИНАЛ И ВОЗВРАЩАЕМ В ЧАТ
+          const term = document.getElementById('terminal-overlay');
+          const sidebar = document.getElementById('sidebar');
+          const chatArea = document.getElementById('chat-area');
+          if (term) term.style.display = 'none';
+          if (sidebar) sidebar.style.display = 'flex';
+          if (chatArea) chatArea.style.display = 'flex';
           printTerm("✅ Стандартный UI (Paper Theme) активирован", '#0f0');
+          setTimeout(() => {
+            printTerm("👋 Возврат в чат...", '#0f0');
+            setTimeout(() => {
+              if (term) term.style.display = 'none';
+              if (sidebar) sidebar.style.display = 'flex';
+              if (chatArea) chatArea.style.display = 'flex';
+            }, 500);
+          }, 1000);
           break;
         case 'matrix':
           r.style.cssText = '--bg:#000; --text:#0f0; --accent:#0f0; --msg-bg:#0a1f0a; --sidebar-bg:#050f05;';
-          printTerm(" MATRIX UI активирован", '#0f0');
+          printTerm("🔲 MATRIX UI активирован", '#0f0');
           break;
         case 'dark':
           r.style.cssText = '--bg:#121212; --text:#e0e0e0; --accent:#bb86fc; --msg-bg:#1e1e1e; --sidebar-bg:#1a1a1a;';
@@ -1559,7 +1574,7 @@ async function execCmd(cmd) {
           break;
         case 'hacker':
           r.style.cssText = '--bg:#0a0a0a; --text:#00ff41; --accent:#ff0055; --msg-bg:#111; --sidebar-bg:#0d0d0d;';
-          printTerm(" HACKER UI активирован", '#0f0');
+          printTerm("🔥 HACKER UI активирован", '#0f0');
           break;
         case 'light':
           r.style.cssText = '--bg:#ffffff; --text:#000; --accent:#007bff; --msg-bg:#f8f9fa; --sidebar-bg:#f1f3f5;';

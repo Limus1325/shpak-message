@@ -680,98 +680,264 @@ async function execCmd(cmd) {
   const c = parts[0].toLowerCase();
   const args = parts.slice(1);
   printTerm(`root@killer:/home/Limus# ${cmd}`, '#0f0');
+
   switch(c) {
     case 'help': case '?':
-      printTerm("\n=== 📚 СПРАВКА ===", '#0f0');
-      printTerm("say <msg> - Отправить сообщение");
-      printTerm("useradd <login> <pass> - Добавить пользователя");
-      printTerm("userdel <login> - Удалить пользователя");
-      printTerm("ban/unban <login> - Забанить/разбанить");
-      printTerm("purge - Очистить чат");
-      printTerm("nuke - Удалить все сообщения");
-      printTerm("spy <user> - Следить за пользователем");
-      printTerm("status - Статус системы");
-      printTerm("clear - Очистить терминал");
-      printTerm("exit - Выйти", '#0f0');
+      printTerm("\n=== 📚 70 МОГУЩЕСТВЕННЫХ КОМАНД ===", '#0f0');
+      printTerm("\n👥 УПРАВЛЕНИЕ ПОЛЬЗОВАТЕЛЯМИ:");
+      printTerm("  useradd <login> <pass>     - Добавить пользователя");
+      printTerm("  userdel <login>            - Удалить пользователя навсегда");
+      printTerm("  usermod <login> <role>     - Сменить роль (root/admin/user)");
+      printTerm("  passwd <login> <newpass>   - Сменить пароль");
+      printTerm("  whois <login>              - Информация о пользователе");
+      printTerm("  listusers                  - Список всех пользователей");
+      printTerm("  ban <login>                - Забанить глобально");
+      printTerm("  unban <login>              - Разбанить");
+      printTerm("  kick <login>               - Выгнать из чата");
+      printTerm("  mute <login>               - Замутить");
+      printTerm("  unmute <login>             - Размутить");
+      
+      printTerm("\n💬 УПРАВЛЕНИЕ ЧАТАМИ:");
+      printTerm("  chatdel <chatId>           - Удалить чат");
+      printTerm("  chatadd <name> <users>     - Создать чат");
+      printTerm("  chatinfo <chatId>          - Информация о чате");
+      printTerm("  listchats                  - Список чатов");
+      printTerm("  cd <chatId>                - Войти в чат");
+      printTerm("  ccd <name> <user>          - Создать приватный чат");
+      
+      printTerm("\n📨 СООБЩЕНИЯ:");
+      printTerm("  say <msg>                  - Отправить сообщение");
+      printTerm("  say [user] <msg>           - Отправить от имени");
+      printTerm("  broadcast <msg>            - Рассылка во все чаты");
+      printTerm("  msgdel <chatId> <msgId>    - Удалить сообщение");
+      printTerm("  purge                      - Очистить текущий чат");
+      printTerm("  nuke                       - Удалить ВСЕ сообщения");
+      
+      printTerm("\n🔐 БЕЗОПАСНОСТЬ:");
+      printTerm("  grant <user> <perm>        - Выдать разрешение");
+      printTerm("  revoke <user> <perm>       - Отозвать разрешение");
+      printTerm("  spy <user>                 - Слежка за юзером");
+      printTerm("  logs                       - Системные логи");
+      printTerm("  audit                      - Проверка безопасности");
+      
+      printTerm("\n💾 БАЗА ДАННЫХ:");
+      printTerm("  query <path>               - Запрос к БД");
+      printTerm("  set <path> <value>         - Установить значение");
+      printTerm("  del <path>                 - Удалить из БД");
+      printTerm("  export                     - Экспорт данных");
+      printTerm("  wipe <path>                - Полная очистка");
+      printTerm("  backup                     - Создать бэкап");
+      printTerm("  restore                    - Восстановить бэкап");
+      
+      printTerm("\n⚙️ СИСТЕМА:");
+      printTerm("  status                     - Статус системы");
+      printTerm("  config <key> <val>         - Изменить конфиг");
+      printTerm("  restart                    - Перезапуск");
+      printTerm("  shutdown                   - Отключить входы");
+      printTerm("  startup                    - Включить входы");
+      printTerm("  decrypt <text>             - Расшифровать");
+      printTerm("  encrypt <text>             - Зашифровать");
+      printTerm("  ping <user>                - Пинг юзера");
+      printTerm("  trace <user>               - Трассировка");
+      printTerm("  ip <user>                  - Узнать IP");
+      printTerm("  clear                      - Очистить терминал");
+      printTerm("  cls                        - Очистить (alias)");
+      printTerm("  exit                       - Выйти");
+      printTerm("  logout                     - Выйти (alias)");
+      
+      printTerm("\n🔧 УТИЛИТЫ:");
+      printTerm("  sudo <cmd>                 - Выполнить как root");
+      printTerm("  whoami                     - Текущий пользователь");
+      printTerm("  ls                         - Список (alias listusers)");
+      printTerm("  ps                         - Процессы (alias status)");
+      printTerm("  rm <path>                  - Удалить (alias del)");
+      printTerm("  cat <path>                 - Прочитать файл");
+      printTerm("  echo <text>                - Вывести текст");
+      printTerm("  date                       - Текущая дата");
+      printTerm("  time                       - Текущее время");
+      printTerm("  uptime                     - Время работы");
+      printTerm("  version                    - Версия системы", '#0f0');
       break;
-    case 'say': {
-      if (args.length === 0) return printTerm("Использование: say <сообщение>", '#fff', true);
-      let target = currentUser.login;
-      let msg = args.join(' ');
-      if (args[0].startsWith('[') && args[0].endsWith(']')) {
-        target = args[0].slice(1, -1);
-        msg = args.slice(1).join(' ');
-      }
-      const lines = msg.match(/.{1,20}/g) || [];
-      const finalText = lines.join('\n');
-      db.ref('messages/' + currentChatId).push({
-        author: target, text: encrypt(finalText), timestamp: Date.now(), type: 'text', role: currentUser.role
-      }).then(() => printTerm(`📤 Отправлено от ${target}`, '#0f0'));
-      break;
-    }
+
     case 'useradd': {
-      if (args.length < 2) return printTerm("Использование: useradd <логин> <пароль>", '#fff', true);
-      const [login, pass] = args;
-      await db.ref('users/' + login).set({
-        password: encrypt(pass), role: 'user', displayName: login, created: Date.now()
-      });
-      printTerm(`✅ Пользователь '${login}' создан`, '#0f0');
-      break;
-    }
+      if (args.length < 2) return printTerm("Использование: useradd <login> <pass>", '#fff', true);
+      await db.ref('users/' + args[0]).set({ password: encrypt(args[1]), role: 'user', displayName: args[0], created: Date.now() });
+      printTerm(`✅ Пользователь '${args[0]}' создан`, '#0f0'); break; }
     case 'userdel': {
-      if (!args[0]) return printTerm("Использование: userdel <логин>", '#fff', true);
-      await db.ref('users/' + args[0]).remove();
-      printTerm(`🗑️ Пользователь '${args[0]}' удалён`, '#f00');
-      break;
-    }
+      if (!args[0]) return printTerm("Использование: userdel <login>", '#fff', true);
+      await db.ref('users/' + args[0]).remove(); printTerm(`🗑️ '${args[0]}' удалён`, '#f00'); break; }
+    case 'usermod': {
+      if (args.length < 2) return printTerm("Использование: usermod <login> <role>", '#fff', true);
+      await db.ref('users/' + args[0] + '/role').set(args[1]); printTerm(`✅ Роль изменена`, '#0f0'); break; }
+    case 'passwd': {
+      if (args.length < 2) return printTerm("Использование: passwd <login> <newpass>", '#fff', true);
+      await db.ref('users/' + args[0] + '/password').set(encrypt(args[1])); printTerm(`✅ Пароль изменён`, '#0f0'); break; }
+    case 'whois': {
+      if (!args[0]) return printTerm("Использование: whois <login>", '#fff', true);
+      const snap = await db.ref('users/' + args[0]).once('value');
+      if (!snap.exists()) return printTerm("Не найден", '#fff', true);
+      const d = snap.val(); printTerm(`\n👤 ${args[0]}\n   Роль: ${d.role}\n   Имя: ${d.displayName}`, '#0f0'); break; }
+    case 'listusers': {
+      const snap = await db.ref('users').once('value');
+      printTerm(`\n📋 Пользователи (${Object.keys(snap.val()||{}).length}):`, '#0f0');
+      snap.forEach(c => printTerm(`   ${c.key} (${c.val().role})`, '#0f0')); break; }
     case 'ban': {
-      if (!args[0]) return printTerm("Использование: ban <логин>", '#fff', true);
-      await db.ref('blocked/' + currentUser.login + '/' + args[0]).set(true);
-      printTerm(`🚫 ${args[0]} забанен`, '#f00');
-      break;
-    }
+      if (!args[0]) return printTerm("Использование: ban <login>", '#fff', true);
+      await db.ref('blocked/' + currentUser.login + '/' + args[0]).set(true); printTerm(`🚫 ${args[0]} забанен`, '#f00'); break; }
     case 'unban': {
-      if (!args[0]) return printTerm("Использование: unban <логин>", '#fff', true);
-      await db.ref('blocked/' + currentUser.login + '/' + args[0]).remove();
-      printTerm(`✅ ${args[0]} разбанен`, '#0f0');
-      break;
-    }
+      if (!args[0]) return printTerm("Использование: unban <login>", '#fff', true);
+      await db.ref('blocked/' + currentUser.login + '/' + args[0]).remove(); printTerm(`✅ ${args[0]} разбанен`, '#0f0'); break; }
+    case 'kick': {
+      if (!args[0]) return printTerm("Использование: kick <login>", '#fff', true);
+      await db.ref('chats/' + currentChatId + '/participants/' + args[0]).remove(); printTerm(`👢 ${args[0]} выгнан`, '#f00'); break; }
+    case 'mute': {
+      if (!args[0]) return printTerm("Использование: mute <login>", '#fff', true);
+      await db.ref('muted/' + args[0]).set(true); printTerm(`🔇 ${args[0]} замучен`, '#f00'); break; }
+    case 'unmute': {
+      if (!args[0]) return printTerm("Использование: unmute <login>", '#fff', true);
+      await db.ref('muted/' + args[0]).remove(); printTerm(`🔊 ${args[0]} размучен`, '#0f0'); break; }
+
+    case 'chatdel': {
+      if (!args[0]) return printTerm("Использование: chatdel <chatId>", '#fff', true);
+      await db.ref('chats/' + args[0]).remove(); await db.ref('messages/' + args[0]).remove(); printTerm(`🗑️ Чат удалён`, '#f00'); break; }
+    case 'chatadd': {
+      if (args.length < 2) return printTerm("Использование: chatadd <name> <user1,user2>", '#fff', true);
+      const users = {}; args[1].split(',').forEach(u => users[u]=true); users[currentUser.login]=true;
+      const ref = await db.ref('chats').push(); await ref.set({ name: args[0], created: Date.now(), participants: users });
+      printTerm(`✅ Чат создан: ${ref.key}`, '#0f0'); break; }
+    case 'chatinfo': {
+      if (!args[0]) return printTerm("Использование: chatinfo <chatId>", '#fff', true);
+      const snap = await db.ref('chats/' + args[0]).once('value');
+      if (!snap.exists()) return printTerm("Не найден", '#fff', true);
+      const d = snap.val(); printTerm(`\n📄 ${d.name}\n   ID: ${args[0]}\n   Участников: ${Object.keys(d.participants||{}).length}`, '#0f0'); break; }
+    case 'listchats': {
+      const snap = await db.ref('chats').once('value');
+      printTerm(`\n📋 Чаты (${Object.keys(snap.val()||{}).length}):`, '#0f0');
+      snap.forEach(c => printTerm(`   ${c.key}: ${c.val().name}`, '#0f0')); break; }
+    case 'cd': {
+      if (!args[0]) return printTerm("Использование: cd <chatId>", '#fff', true);
+      currentChatId = args[0]; loadMessages(currentChatId); printTerm(`📂 В чате ${currentChatId}`, '#0f0'); break; }
+    case 'ccd': {
+      if (args.length < 2) return printTerm("Использование: ccd <name> <user>", '#fff', true);
+      const ref = await db.ref('chats').push();
+      await ref.set({ name: args[0], created: Date.now(), participants: { [currentUser.login]: true, [args[1]]: true } });
+      printTerm(`✅ Приватный чат создан`, '#0f0'); break; }
+
+    case 'say': {
+      if (!args[0]) return printTerm("Использование: say <msg>", '#fff', true);
+      let target = currentUser.login, msg = args.join(' ');
+      if (args[0].startsWith('[') && args[0].endsWith(']')) { target = args[0].slice(1,-1); msg = args.slice(1).join(' '); }
+      const lines = msg.match(/.{1,20}/g) || [];
+      await db.ref('messages/' + currentChatId).push({ author: target, text: encrypt(lines.join('\n')), timestamp: Date.now(), type: 'text', role: currentUser.role });
+      printTerm(`📤 Отправлено от ${target}`, '#0f0'); break; }
+    case 'broadcast': {
+      if (!args[0]) return printTerm("Использование: broadcast <msg>", '#fff', true);
+      const chats = await db.ref('chats').once('value'); let count = 0;
+      chats.forEach(c => { db.ref('messages/' + c.key).push({ author: `[BROADCAST] ${currentUser.login}`, text: encrypt(args.join(' ')), timestamp: Date.now(), type: 'text' }); count++; });
+      printTerm(`📡 Отправлено в ${count} чатов`, '#0f0'); break; }
+    case 'msgdel': {
+      if (args.length < 2) return printTerm("Использование: msgdel <chatId> <msgId>", '#fff', true);
+      await db.ref('messages/' + args[0] + '/' + args[1]).remove(); printTerm(`🗑️ Удалено`, '#0f0'); break; }
     case 'purge': {
       if (!confirm('🗑️ Очистить чат?')) return;
-      await db.ref('messages/' + currentChatId).remove();
-      printTerm('💥 Чат очищен', '#0f0');
-      break;
-    }
+      await db.ref('messages/' + currentChatId).remove(); printTerm('💥 Чат очищен', '#0f0'); break; }
     case 'nuke': {
-      if (!confirm('⚠️ УДАЛИТЬ ВСЕ СООБЩЕНИЯ?')) return;
-      await db.ref('messages').remove();
-      printTerm('💥 ВСЕ СООБЩЕНИЯ УНИЧТОЖЕНЫ', '#f00');
-      break;
-    }
+      if (!confirm('⚠️ УДАЛИТЬ ВСЁ?')) return;
+      await db.ref('messages').remove(); printTerm('💥 ВСЁ УНИЧТОЖЕНО', '#f00'); break; }
+
+    case 'grant': {
+      if (args.length < 2) return printTerm("Использование: grant <user> <perm>", '#fff', true);
+      await db.ref('permissions/' + args[0] + '/' + args[1]).set(true); printTerm(`✅ Разрешение выдано`, '#0f0'); break; }
+    case 'revoke': {
+      if (args.length < 2) return printTerm("Использование: revoke <user> <perm>", '#fff', true);
+      await db.ref('permissions/' + args[0] + '/' + args[1]).remove(); printTerm(`❌ Разрешение отозвано`, '#0f0'); break; }
     case 'spy': {
-      if (!args[0]) return printTerm("Использование: spy <юзер>", '#fff', true);
+      if (!args[0]) return printTerm("Использование: spy <user>", '#fff', true);
       printTerm(`👁️ Слежка за ${args[0]}...`, '#0f0');
       db.ref('messages').orderByChild('author').equalTo(args[0]).limitToLast(10).on('child_added', snap => {
-        const d = snap.val();
-        printTerm(`[${d.author}]: ${decrypt(d.text)}`, '#ff0');
-      });
-      break;
-    }
+        printTerm(`[${snap.val().author}]: ${decrypt(snap.val().text)}`, '#ff0');
+      }); break; }
+    case 'logs': {
+      printTerm("📋 Логи:", '#0f0');
+      const snap = await db.ref('logs').limitToLast(10).once('value');
+      snap.forEach(c => printTerm(`[${new Date(c.val().time).toLocaleString()}] ${c.val().event}`, '#888')); break; }
+    case 'audit': {
+      printTerm("🔍 Аудит безопасности...", '#0f0');
+      const users = await db.ref('users').once('value');
+      let roots = 0, admins = 0;
+      users.forEach(u => { if(u.val().role==='root') roots++; if(u.val().role==='admin') admins++; });
+      printTerm(`   Всего: ${Object.keys(users.val()||{}).length}\n   Root: ${roots}\n   Admin: ${admins}`, '#0f0'); break; }
+
+    case 'query': {
+      if (!args[0]) return printTerm("Использование: query <path>", '#fff', true);
+      const snap = await db.ref(args[0]).once('value');
+      printTerm(JSON.stringify(snap.val(), null, 2), '#0f0'); break; }
+    case 'set': {
+      if (args.length < 2) return printTerm("Использование: set <path> <value>", '#fff', true);
+      await db.ref(args[0]).set(args.slice(1).join(' ')); printTerm(`✅ Записано`, '#0f0'); break; }
+    case 'del': {
+      if (!args[0]) return printTerm("Использование: del <path>", '#fff', true);
+      await db.ref(args[0]).remove(); printTerm(`🗑️ Удалено`, '#f00'); break; }
+    case 'export': {
+      printTerm("📦 Экспорт...", '#0f0');
+      const data = { users: await db.ref('users').once('value').then(s=>s.val()), chats: await db.ref('chats').once('value').then(s=>s.val()), time: Date.now() };
+      printTerm(`Экспортировано ${JSON.stringify(data).length} байт`, '#0f0'); break; }
+    case 'wipe': {
+      if (!args[0]) return printTerm("Использование: wipe <path>", '#fff', true);
+      if (!confirm(`⚠️ ОЧИСТИТЬ ${args[0]}?`)) return;
+      await db.ref(args[0]).remove(); printTerm(`💥 Очищено`, '#f00'); break; }
+    case 'backup': {
+      printTerm("💾 Создание бэкапа...", '#0f0');
+      await db.ref('backups/' + Date.now()).set({ users: await db.ref('users').once('value').then(s=>s.val()), messages: await db.ref('messages').once('value').then(s=>s.val()) });
+      printTerm(`✅ Бэкап создан`, '#0f0'); break; }
+    case 'restore': {
+      printTerm("♻️ Восстановление...", '#0f0');
+      printTerm("⚠️ Функция в разработке", '#fff', true); break; }
+
     case 'status': {
-      printTerm("\n🖥️ СТАТУС СИСТЕМЫ", '#0f0');
-      printTerm(`Пользователь: ${currentUser.login} (${currentUser.role})`);
-      printTerm(`Чат: ${currentChatId}`, '#0f0');
-      break;
-    }
-    case 'clear':
-      document.getElementById('terminal-output').innerHTML = '';
-      break;
-    case 'exit':
-      printTerm("👋 Завершение сессии...", '#0f0');
-      setTimeout(() => logout(), 300);
-      break;
-    case 'sudo': execCmd(args.join(' ')); break;
-    default: printTerm(`bash: ${c}: команда не найдена`, '#fff', true);
+      printTerm("\n🖥️ SHPAK OS v4.0", '#0f0');
+      printTerm(`   User: ${currentUser.login} (${currentUser.role})`);
+      printTerm(`   Chat: ${currentChatId}`);
+      printTerm(`   Blocked: ${blockedUsers.length}`, '#0f0'); break; }
+    case 'config': {
+      if (args.length < 2) return printTerm("Использование: config <key> <val>", '#fff', true);
+      await db.ref('config/' + args[0]).set(args.slice(1).join(' ')); printTerm(`✅ Конфиг изменён`, '#0f0'); break; }
+    case 'restart': { printTerm("🔄 Перезапуск...", '#0f0'); setTimeout(()=>location.reload(),1000); break; }
+    case 'shutdown': {
+      if (!confirm('⚠️ ОТКЛЮЧИТЬ ВХОДЫ?')) return;
+      await db.ref('system/maintenance').set(true); printTerm("🛑 Система отключена", '#f00'); break; }
+    case 'startup': {
+      await db.ref('system/maintenance').remove(); printTerm("✅ Система включена", '#0f0'); break; }
+    case 'decrypt': { printTerm(decrypt(args.join(' ')), '#0f0'); break; }
+    case 'encrypt': { printTerm(encrypt(args.join(' ')), '#0f0'); break; }
+    case 'ping': {
+      if (!args[0]) return printTerm("Использование: ping <user>", '#fff', true);
+      printTerm(`PING ${args[0]}: 64 bytes, time=${Math.floor(Math.random()*100)}ms`, '#0f0'); break; }
+    case 'trace': {
+      if (!args[0]) return printTerm("Использование: trace <user>", '#fff', true);
+      printTerm(`Tracing ${args[0]}... 3 hops found`, '#0f0'); break; }
+    case 'ip': {
+      if (!args[0]) return printTerm("Использование: ip <user>", '#fff', true);
+      printTerm(`${args[0]}: 192.168.0.${Math.floor(Math.random()*255)}`, '#0f0'); break; }
+    case 'clear': case 'cls': { document.getElementById('terminal-output').innerHTML = ''; break; }
+    case 'exit': case 'logout': { printTerm("👋 Выход...", '#0f0'); setTimeout(()=>logout(),300); break; }
+
+    case 'sudo': { execCmd(args.join(' ')); break; }
+    case 'whoami': { printTerm(`${currentUser.login} (uid=0 root)`, '#0f0'); break; }
+    case 'ls': { execCmd('listusers'); break; }
+    case 'ps': { execCmd('status'); break; }
+    case 'rm': { execCmd(`del ${args.join(' ')}`); break; }
+    case 'cat': {
+      if (!args[0]) return printTerm("Использование: cat <path>", '#fff', true);
+      const snap = await db.ref(args[0]).once('value');
+      printTerm(JSON.stringify(snap.val()), '#0f0'); break; }
+    case 'echo': { printTerm(args.join(' '), '#0f0'); break; }
+    case 'date': { printTerm(new Date().toLocaleString(), '#0f0'); break; }
+    case 'time': { printTerm(new Date().toLocaleTimeString(), '#0f0'); break; }
+    case 'uptime': { printTerm(`Uptime: ${Math.floor(performance.now()/1000)}s`, '#0f0'); break; }
+    case 'version': { printTerm("SHPAK OS v4.0 [ROOT ACCESS]", '#0f0'); break; }
+
+    default: printTerm(`bash: ${c}: команда не найдена. Введите 'help'`, '#fff', true);
   }
 }
 
@@ -782,16 +948,8 @@ function logout() {
   const screen = document.getElementById('auth-screen');
   const box = document.getElementById('auth-box');
   if (terminal) terminal.style.display = 'none';
-  if (screen) {
-    screen.style.display = 'flex';
-    screen.classList.remove('whiteout');
-  }
-  if (box) {
-    box.classList.remove('unfolding');
-    box.style.display = 'block';
-    box.style.opacity = '1';
-    box.style.transform = 'rotate(-2deg)';
-  }
+  if (screen) { screen.style.display = 'flex'; screen.classList.remove('whiteout'); }
+  if (box) { box.classList.remove('unfolding'); box.style.display = 'block'; box.style.opacity = '1'; box.style.transform = 'rotate(-2deg)'; }
   const loginInput = document.getElementById('login');
   const passInput = document.getElementById('pass');
   if (loginInput) loginInput.value = '';

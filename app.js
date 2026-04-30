@@ -1,7 +1,6 @@
 // ==========================================
 // 🔥 SHPAK MESSAGE v5.0 - FULL VERSION
 // ==========================================
-let callListener = null; // 🔥 ДОБАВЛЕНО
 
 function logout() { // 🔥 ДОБАВЛЕНО
   localStorage.removeItem('shpak_user');
@@ -75,6 +74,7 @@ const ENCODED_USERS = [
 
 let currentUser = null;
 let currentChatId = 'general';
+let callListener = null; // 🔥 ДОБАВЛЕНО
 let msgListener = null;
 let blockedUsers = [];
 let replyTo = null;

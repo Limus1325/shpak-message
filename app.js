@@ -11,7 +11,11 @@ const firebaseConfig = {
   messagingSenderId: "302522413165",
   appId: "1:302522413165:web:cbd2d65395c58289680f64"
 };
-firebase.initializeApp(firebaseConfig);
+
+// Инициализация Firebase с проверкой
+if (!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
 const db = firebase.database();
 
 // ==========================================
@@ -69,8 +73,6 @@ let currentChatId = 'general';
 let msgListener = null;
 let blockedUsers = [];
 let replyTo = null;
-let localStream, peerConnection, callId = null, callListener = null, callTimerInterval = null, callSeconds = 0;
-const ICE_SERVERS = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
 // ==========================================
 // 🔔 УВЕДОМЛЕНИЯ
@@ -97,24 +99,49 @@ function showNotification(author, role, text) {
 }
 
 // ==========================================
-// 🚀 ИНИЦИАЛИЗАЦИЯ
+// 🚀 ИНИЦИАЛИЗАЦИЯ БД
 // ==========================================
 async function initDB() {
-  for (const u of ENCODED_USERS) {
-    const login = atob(u.l), pass = atob(u.p);
-    const snap = await db.ref('users/' + login).once('value');
-    if (!snap.exists()) await db.ref('users/' + login).set({ password: encrypt(pass), role: u.r, displayName: u.n });
-  }
-  const gen = await db.ref('chats/general').once('value');
-  if (!gen.exists()) await db.ref('chats/general').set({ name: 'Общий чат', created: Date.now(), participants: { 'LMUSSS': true, 'GENERAL DIRECTOR': true, 'Алексей': true, 'Ковалёв': true, 'ROB': true, 'Ваня': true, 'ОБСОС': true } });
-  
-  db.ref('blocked').on('value', snap => {
-    if(currentUser) {
-      blockedUsers = Object.keys(snap.val()[currentUser.login] || {});
-      if(document.getElementById('messages')?.children.length > 0) loadMessages(currentChatId);
+  try {
+    for (const u of ENCODED_USERS) {
+      const login = atob(u.l);
+      const pass = atob(u.p);
+      const snap = await db.ref('users/' + login).once('value');
+      if (!snap.exists()) {
+        await db.ref('users/' + login).set({
+          password: encrypt(pass),
+          role: u.r,
+          displayName: u.n,
+          created: Date.now()
+        });
+      }
     }
-  });
+    
+    // Создаём общий чат если нет
+    const gen = await db.ref('chats/general').once('value');
+    if (!gen.exists()) {
+      await db.ref('chats/general').set({
+        name: 'Общий чат',
+        created: Date.now(),
+        participants: {
+          'LMUSSS': true,
+          'GENERAL DIRECTOR': true,
+          'Алексей': true,
+          'Ковалёв': true,
+          'ROB': true,
+          'Ваня': true,
+          'ОБСОС': true
+        }
+      });
+    }
+    
+    console.log('✅ База данных инициализирована');
+  } catch (error) {
+    console.error('❌ Ошибка инициализации БД:', error);
+  }
 }
+
+// Запускаем инициализацию
 initDB();
 
 function login() {

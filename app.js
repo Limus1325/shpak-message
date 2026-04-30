@@ -1,7 +1,12 @@
 // ==========================================
 // 🔥 SHPAK MESSAGE v5.0 - FULL VERSION
 // ==========================================
+let callListener = null; // 🔥 ДОБАВЛЕНО
 
+function logout() { // 🔥 ДОБАВЛЕНО
+  localStorage.removeItem('shpak_user');
+  location.reload();
+}
 const firebaseConfig = {
   apiKey: "AIzaSyCCTgHTXjKC3Q0x3YRZtR6cikE-p2FoQ_0",
   authDomain: "shpak-message.firebaseapp.com",

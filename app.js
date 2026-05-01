@@ -276,6 +276,22 @@ function startApp() {
   switchChat('general');
   listenForCalls();
   requestNotifPermission();
+  
+  // 🔥 СЛУШАТЕЛЬ НОВЫХ СООБЩЕНИЙ (с уведомлениями)
+  db.ref('messages').limitToLast(1).on('child_added', snap => {
+    const data = snap.val();
+    // Уведомление ТОЛЬКО если:
+    // 1. Сообщение не от нас
+    // 2. Мы не в этом чате сейчас
+    // 3. Текст (не фото)
+    if (data.author !== currentUser.login && 
+        data.type === 'text' && 
+        currentChatId !== snap.ref.parent.key) {
+      
+      const rawText = decrypt(data.text).replace(/\n/g, ' ').trim();
+      showNotification(data.author, data.role, rawText);
+    }
+  });
 }
 
 const saved = localStorage.getItem('shpak_user');
@@ -343,16 +359,13 @@ function loadMessages(chatId) {
   container.innerHTML = '';
   if (msgListener) db.ref('messages/' + currentChatId).off('child_added', msgListener);
   
+  // 🔥 ЗАГРУЗКА ИСТОРИИ (без уведомлений)
   msgListener = db.ref('messages/' + chatId).limitToLast(60).on('child_added', snap => {
     const data = snap.val();
     if (blockedUsers.includes(data.author)) return;
     renderMessage(data, snap.key, chatId);
     
-    // 🔔 УВЕДОМЛЕНИЯ
-    if (data.author !== currentUser.login && data.type === 'text') {
-      const rawText = decrypt(data.text).replace(/\n/g, ' ').trim();
-      showNotification(data.author, data.role, rawText);
-    }
+    // ❌ УБРАЛИ УВЕДОМЛЕНИЯ ОТСЮДА
   });
 }
 
@@ -482,6 +495,16 @@ function listenForCalls() {
   callListener = db.ref('calls').orderByChild('to').equalTo(currentUser.login).on('child_added', snap => {
     const d = snap.val();
     if (d.status === 'offering') {
+      // 🔔 УВЕДОМЛЕНИЕ О ЗВОНКЕ
+      if ("Notification" in window && Notification.permission === "granted") {
+        new Notification(`📞 Входящий звонок от ${d.from}`, {
+          body: 'Нажмите, чтобы принять',
+          icon: '✈️',
+          tag: `call-${snap.key}`,
+          requireInteraction: true
+        });
+      }
+      
       const toast = document.getElementById('incoming-call-toast');
       const callerName = document.getElementById('caller-name');
       if(toast && callerName) {
